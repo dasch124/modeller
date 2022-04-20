@@ -1,6 +1,5 @@
 #!/bin/bash
 listingHtmlFilenamePattern="listing_#.html"
-svgFilenamePattern="$listingHtmlFilenamePattern.svg"
 export schemaFilename="model.rng"
 
 setup() {
@@ -18,17 +17,13 @@ setup() {
 		chmod u+x "$libdir/owl-x86_64-linux-snapshot"
 	fi
 
-	if [ ! -e "$libdir/saxon" ]
+	if [ ! -f "$libdir/saxon/saxon-he-11.3.jar" ]
 	then
 		mkdir "$libdir/saxon"
 		wget https://altushost-swe.dl.sourceforge.net/project/saxon/Saxon-HE/11/Java/SaxonHE11-3J.zip -O "$libdir/saxon/SaxonHE11-3J.zip"
 		cd "$libdir/saxon"
 		unzip *.zip
 	fi
-	saxon() {
-		java -jar $libdir/saxon/saxon-he-11.3.jar "$1"
-	}
-	export -f saxon
 #
 #	if [ ! -f "$libdir/base64.xsl" ]
 #	then
@@ -40,6 +35,10 @@ setup() {
 #		wget https://raw.githubusercontent.com/ilyakharlamov/xslt_base64/master/base64_binarydatamap.xml -O "$libdir/base64_binarydatamap.xml"
 #	fi
 	return 0
+}
+
+saxon() {
+	java -jar $libdir/saxon/saxon-he-11.3.jar $@
 }
 
 expandModel() {
@@ -65,15 +64,31 @@ highlight() {
 		lang=`xmlstarlet sel -t -v "(//code)[$i]/@language" $model`
 		name=`xmlstarlet sel -t -v "(//code)[$i]/ancestor::*[name]/name" $model`
 		listingHtml=`echo $listingHtmlFilenamePattern | sed -r "s/#/$i/"`
+		if [[ -z $name ]];
+		then 
+			echo "no \$name found for //h:code[$i] – exiting"
+			xmlstarlet sel -t -v "(//code)[$i]/parent::*" $model
+			exit 1
+		fi
 		debug "processing code example number $i: $lang / $name > $workingdir/$listingHtml"
 		code=`xmlstarlet sel -N h='http://www.w3.org/1999/xhtml' -t -c "(//h:code)[$i]/node()" $html`
-		doFormat "$code" $lang | doHighlight > "$workingdir/$listingHtml"
+		doFormat "$code" $lang | doHighlight $lang > "$workingdir/$listingHtml"
 	done
 }
 
 doHighlight(){
-	#source-highlight --src-lan $lang -o "$workingdir/$listingHtml"
-	pygmentize -O noclasses -f html -l $lang | xmllint --html --xmlout - | xmlstarlet sel -t -c "//div[@class = 'highlight']"
+	# moving from source-highlight to pygmentize because it supports more languages
+	# source-highlight --src-lan $lang -o "$workingdir/$listingHtml"
+	debug "*** doHighlight($@) ***"
+	lang=$1
+	if [ -z "$lang" ];
+	then 
+		debug "no \$lang provided, passing on as-is "
+		echo "<div>$1</div>"
+	else 
+		debug "pygmentize -O noclasses -f html -l $lang | xmllint --html --xmlout - | xmlstarlet sel -t -c "//div[@class = 'highlight']""
+		pygmentize -O noclasses -f html -l $lang | xmllint --html --xmlout - | xmlstarlet sel -t -c "//div[@class = 'highlight']"
+	fi
 }
 
 doFormat() {
@@ -94,27 +109,39 @@ doFormat() {
 	echo -n "$output"
 }
 
-toSvg() {	
+toImg() {	
+	echo "*** toImg() ***"
+	debug "*** toImg() ***"
 	html=$1
+	format=$2
+	debug "\$html=$html"
+	debug "\$format=$format"
+	
 	c=`xmlstarlet sel --xinclude -N h='http://www.w3.org/1999/xhtml' -t -v "count(//h:code)" $html`
 	for i in $(seq "$c"); do 
 		listingHtmlFilename=`echo $listingHtmlFilenamePattern | sed -r "s/#/$i/"`
-		svgFilename=`echo $svgFilenamePattern | sed -r "s/#/$i/"`
-		cat "$workingdir/$listingHtmlFilename" | wkhtmltoimage -f svg - "$workingdir/$svgFilename"
+		imgFilename=`echo $imgFilenamePattern | sed -r "s/#/$i/"`
+		debug "\$imgFilename=$imgFilename"
+		cat "$workingdir/$listingHtmlFilename" | wkhtmltoimage -f $format - "$workingdir/$imgFilename"
 	done
+	debug "*** done toImg() ***"
 }
 
 embedImgs() {
 	html=$1
 	imgDataXML="$workingdir/imageData.xml"
+	echo "*** embedImgs() ***"
+	debug "*** embedImgs() ***"
+	debug "\$imgDataXML=$imgDataXML"
+	debug "\$workingdir=$workingdir"
 	echo "<_>" > $imgDataXML
 	c=`xmlstarlet sel --xinclude -N h='http://www.w3.org/1999/xhtml' -t -v "count(//h:code)" $html`
 	for i in $(seq "$c"); do 
 		listingHtmlFilename=`echo $listingHtmlFilenamePattern | sed -r "s/#/$i/"`
-		#svgFilename=`echo $svgFilenamePattern | sed -r "s/#/$i/"`
-		echo "<img format='image/svg' src='"$workingdir/$listingHtmlFilename"'>" >> $imgDataXML
-		cat "$workingdir/$listingHtmlFilename" | wkhtmltoimage -f png - "$workingdir/$svgFilename" | base64 
-		base64 "$workingdir/$svgFilename" >> $imgDataXML
+		#imgFilename=`echo $imgFilenamePattern | sed -r "s/#/$i/"`
+		echo "<img format='image/$img' src='"$workingdir/$listingHtmlFilename"'>" >> $imgDataXML
+		cat "$workingdir/$listingHtmlFilename" | wkhtmltoimage -f $imgFormat - "$workingdir/$imgFilename" | base64 
+		base64 "$workingdir/$imgFilename" >> $imgDataXML
 		echo "</img>" >> $imgDataXML
 		echo "" >> $imgDataXML
 	done
@@ -131,28 +158,35 @@ embedImgs() {
 	
 	echo "</_>" >> $imgDataXML
 
-	saxon -xsl:"$scriptdir/injectListing.xsl" -p svgFilnamePattern=$svgFilenamePattern pathToImageDataXML="$imgDataXML" workingdir="$workingdir" -o:$html $html 
+	debug "saxon -xsl:"$scriptdir/injectListing.xsl" -p imgFilnamePattern=$imgFilenamePattern pathToImageDataXML="$imgDataXML" workingdir="$workingdir" -o:$html $html"
+	saxon -xsl:"$scriptdir/injectListing.xsl" -p imgFilnamePattern=$imgFilenamePattern pathToImageDataXML="$imgDataXML" workingdir="$workingdir" -o:$html $html 
 }
 
 
 toDot() {
-	# transforms the model document to a dot file and renders it as an svg image
+	# transforms the model document to a dot file and renders it as an image
 	# inputfile: the path to the model document
 	# returns the path to the generated image file
 	inputfile=$1
 	dotoutputfile="$inputfile.dot"
-	imgoutputfile="$dotoutputfile.svg"
+	imgoutputfile="$dotoutputfile.$imgFormat"
 	debug "*** toDot() ***"
 	debug "\$inputfile=$inputfile"
 	debug "\$dotoutputfile=$dotoutputfile"
 	debug "\$imgoutputfile=$imgoutputfile"
 	debug "saxon -xsl:$scriptdir/model2dot.xsl  -s:$inputfile -o:$dotoutputfile -xi:on $parameters"
-	saxon -xsl:"$scriptdir/model2dot.xsl"  -s:$inputfile -o:"$dotoutputfile" -xi:on $parameters
+
+	if [[ $verbose -eq 1 ]]; 
+	then
+	debugxsl="debug=true"
+	fi
+	debug "saxon -xsl:$scriptdir/model2dot.xsl  -s:$inputfile -o:$dotoutputfile -xi:on $parameters $debugxsl"
+	saxon -xsl:"$scriptdir/model2dot.xsl"  -s:$inputfile -o:"$dotoutputfile" -xi:on $parameters $debugxsl
 
 	if [ $? -eq 0 ]; then debug "wrote dotfile to $dotoutputfile"; else echo "an error occured transforming xml to dot"; exit $?; fi
-	debug "dot $dotoutputfile -Tsvg -o $imgoutputfile" 	
+	debug "dot $dotoutputfile -T$imgFormat -o $imgoutputfile" 	
 	
-	dot "$dotoutputfile" -Tsvg -o "$imgoutputfile" 
+	dot "$dotoutputfile" -T$imgFormat -o "$imgoutputfile" 
 	if [ $? -ne 0 ]; then echo "an error occured running dot on $dotoutputfile"; exit $?; fi
 	echo $imgoutputfile
 }
@@ -174,6 +208,7 @@ model2html() {
 validate() {
 	file=$1	
 	pathToSchema=$(xmlstarlet sel -t  -v '//processing-instruction("xml-model")' $file | grep --only-matching -P '(?<=href=").+?(?=")')
+	debug "*** validate() ***"
 	[ -z "$pathToSchema" ]  && pathToSchema=$(realpath $scriptdir/$schemaFilename)
 
 	if [ ! -f "$pathToSchema" ]
@@ -223,18 +258,21 @@ generateDocs() {
 	model2html $model $dotfilepath
 
 	debug "\$html=$html"
+	
 	# extract listings, highlight them and store to temporary html files
+	debug "highlight $html `realpath $model`"
+	highlight $html "`realpath $model`"
 
-	highlight $html "$inputfile"
-
+	
 	# replace html:code with the highlighted files from the step above
-	debug "saxon -xsl:replaceListingWithHighlightedHtml.xsl -p listingHtmlFilenamePattern="tmp/$listingHtmlFilenamePattern" -o:$html $html"
-	saxon -xsl:"$scriptdir/replaceListingWithHighlightedHtml.xsl" -p listingHtmlFilenamePattern="tmp/$listingHtmlFilenamePattern" -o:$html $html
+	debug "saxon -xsl:replaceListingWithHighlightedHtml.xsl -p listingHtmlFilenamePattern="$workingdir/$listingHtmlFilenamePattern" -o:$html $html"
+	saxon -xsl:"$scriptdir/replaceListingWithHighlightedHtml.xsl" -p listingHtmlFilenamePattern="$workingdir/$listingHtmlFilenamePattern" -o:$html $html
 
-	# convert highlighted html code elements to svg 
-	toSvg $html
+	# convert highlighted html code elements to svg or png 
+	imgFormat=$(echo $parameters | grep -oP "(?<=imgFormat=)\w+") || "svg"
+	toImg $html $imgFormat
 
-	# … and replace the code elements with the resulting svg images –
+	# … and replace the code elements with the resulting images –
 	# unfortunately this is needed because pandoc does not retain the 
 	# CSS styling of the listings.
 	embedImgs $html
@@ -259,18 +297,20 @@ text="
 
 -a: action to run: 
 	* generateDocs: generate full documentation in docx
-	* generateGraph: only generate SVG graph
+	* generateGraph: only generate graph image (format per default svg, otherwise pass 'imgFormat=png' as last parameter)
 	* generateTemplates: generate empty xml templates to start fromt
 	* setup: initial setup of folder structure and dependencies for processing
 -i: input (XMl-enoded model) - obligatory for all actions except generateTemplates or setup
 -o: ouptput filename (optional)
--v: verbose – write additional output to a logfile
+-v: verbose – write additional output (to a logfile and to stdout)
 -l: name of the log file (implies -v)
 -k: keep temporary files for debugging purposes
 -p: parameters – passed to underlying commands
 	* showAbstractSuperclasses=true: include abstract superclasses in the graph rendering
 	* showProperties=true: show properties for classes
 	* showCardinalities=true: show cardinalities for class properties (TODO relations)
+	* imgFormat=(png|svg): the format of any images in the documentation
+	* ranksep, nodesep: options to tweak dot graph output, cf. <https://graphviz.org/docs/attrs/ranksep/> and <https://graphviz.org/docs/attrs/nodesep/>
 "
 echo "$text"
 exit 1
@@ -300,10 +340,15 @@ else
 fi
 
 export scriptdir
-echo "\$scriptdir = $scriptdir"
+debug "\$scriptdir = $scriptdir"
 export libdir="$scriptdir/lib"
+export PATH="$PATH:$libdir"
 parameters=$parameters 
-
+imgFormat=$(echo $parameters | grep -oP "(?<=imgFormat=)\w+") || "svg"
+imgFilenamePattern="$listingHtmlFilenamePattern.$imgFormat"
+debug "\$parameters=$parameters"
+debug "\$imgFormat=$imgFormat"
+debug "\$imgFilenamePattern=$imgFilenamePattern"
 if [[ $verbose -eq 1 ]]; then
 	if [[ -z $logfile ]]; then export logfile="build.log"; fi
 	echo "** debug run `date` **" > $logfile
@@ -350,7 +395,7 @@ case $ACTION in
 	;;
 
 	setup)
-		sudo dnf install pandoc graphviz libxml2 xmlstarlet python3-pygments wkhtmltopdf
+		sudo dnf install pandoc graphviz libxml2 xmlstarlet python3-pygments wkhtmltopdf wget unzip
 		setup 
 		
 	;;

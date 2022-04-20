@@ -5,7 +5,7 @@
     xmlns:h="http://www.w3.org/1999/xhtml"
     exclude-result-prefixes="#all"
     version="2.0">
-    <xsl:param name="svgFilnamePattern" as="xs:string"/>
+    <xsl:param name="imgFilnamePattern" as="xs:string"/>
     <!-- either 
         * "reference" to just ingest the image via file reference 
         * "embed" to embedd a base64-encoded version of the image 
@@ -50,12 +50,12 @@
         <xsl:variable name="position" select="count(preceding::*:code)+1"/>
         <xsl:variable name="xmlfn" select="concat('listing_',$position,'.html')"/>
         <xsl:variable name="xml" select="doc($xmlfn)"/>
-        <xsl:variable name="svgFilename" select="replace($svgFilnamePattern,'#',xs:string($position))"/>
-        <xsl:message select="concat('injectListing.xsl: $svgFilename=',$svgFilename)"/>
+        <xsl:variable name="imgFilename" select="replace($imgFilnamePattern,'#',xs:string($position))"/>
+        <xsl:message select="concat('injectListing.xsl: $svgFilename=',$imgFilename)"/>
         <figure>
             <xsl:choose>
                 <xsl:when test="$mode = 'reference'">
-                    <img src="{$svgFilename}"/>
+                    <img src="{$imgFilename}"/>
                 </xsl:when>
                 <xsl:otherwise>
                     <xsl:variable name="imgDataEncoded" select="doc($pathToImageDataXML)//img[$position]"/>

@@ -6,8 +6,10 @@
     xmlns:_="urn:local"
     exclude-result-prefixes="#all"
     version="2.0">  
+    <xsl:param name="debug">false</xsl:param>
     <xsl:param name="pathToModelDir"/>
     <xsl:param name="pathToModelDot"/>
+    <xsl:variable name="doc" select="root(.)"/>
     <xsl:output method="xhtml" indent="yes"/>
     <xsl:strip-space elements="*"/>
     <xsl:preserve-space elements="p"/>
@@ -26,49 +28,68 @@
     </xsl:function>
    
     <xsl:template match="/">
+        <xsl:if test="$debug = 'true'">
+            <xsl:message>$pathToModelDir = <xsl:value-of select="$pathToModelDir"/></xsl:message>
+            <xsl:message>$pathToModelDot = <xsl:value-of select="$pathToModelDot"/></xsl:message>
+        </xsl:if>
         <html>
             <head>
                 <title><xsl:value-of select="/model/meta/title"/></title>
+                <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">&#160;</link>
             </head>
             <body>  
-               <div>
-                   <table>
-                       <tr>
-                           <td>Author(s): </td>
-                           <td><xsl:value-of select="string-join(//contributor[@role = 'author']/person/name,'&#160;')"/></td>
-                       </tr>
-                           <tr>
-                               <td>Version: </td>
-                               <td><xsl:value-of select="//version"/></td>
-                           </tr>
-                           <tr>
-                               <td>Last Changed: </td>
-                               <td><xsl:value-of select="max(//change/xs:date(@when))"/></td>
-                           </tr>
-                           <tr>
-                               <td>Documentation generated: </td>
+                <div class="container">
+                    <h1><xsl:value-of select="/model/meta/title"/></h1>
+                    <header>
+                        <table class="table">
+                            <tr>
+                                <td>Author(s): </td>
+                                <td><xsl:value-of select="string-join(//contributor[@role = 'author']/person/name,'&#160;')"/></td>
+                            </tr>
+                            <tr>
+                                <td>Version: </td>
+                                <td><xsl:value-of select="//version"/></td>
+                            </tr>
+                            <tr>
+                                <td>Last Changed: </td>
+                                <td><xsl:value-of select="max(//change/xs:date(@when))"/></td>
+                            </tr>
+                            <tr>
+                                <td>Documentation generated: </td>
                                 <td><xsl:value-of select="current-dateTime()"/></td>
-                           </tr>
-                       <xsl:for-each select="//docProp">
-                           <tr><td><xsl:value-of select="@name"/></td>
-                           <td><xsl:apply-templates/></td></tr>
-                       </xsl:for-each>
-                   </table>
+                            </tr>
+                            <xsl:for-each select="//docProp">
+                                <tr><td><xsl:value-of select="@name"/></td>
+                                    <td><xsl:apply-templates/></td></tr>
+                            </xsl:for-each>
+                        </table>
+                    </header>
                </div>
-                <div>
+                <main>
                     <h2>Graphical Overview</h2>
-                    <figure>
-                        <img src="{$pathToModelDot}"/>
+                    <figure class="figure">
+                        <xsl:choose>
+                            <xsl:when test="ends-with($pathToModelDot,'svg')">
+                                <xsl:sequence select="doc(concat($pathToModelDir,'/',tokenize($pathToModelDot,'/')[last()]))"/>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <img src="{$pathToModelDot}" class="img-responsive img-fit-contain"/>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                        <figcaption class="figure-caption text-center">Graphical Overview of the data model.<br/>Dashed lines mean implicit shortcut relations.</figcaption>
                     </figure>
-                    <p>Graphical Overview.<br/>Dashed lines mean implicit shortcut relations.</p>
-                </div>
-                <xsl:apply-templates/>
+                    <xsl:apply-templates/>
+                </main>
             </body>
         </html>
     </xsl:template>
     
+    <xsl:template match="head">
+        <xsl:sequence select="_:head(.)"/>
+    </xsl:template>
+    
     <xsl:template match="meta/changelog">
-        <table>
+        <table class="table">
             <xsl:apply-templates/>
         </table>
     </xsl:template>
@@ -110,6 +131,7 @@
                         <xsl:apply-templates select="node()"/>
                     </xsl:when>
                     <xsl:otherwise>
+                        <xsl:sequence select="_:head(., $head)"/>
                         <xsl:apply-templates select="node()"/>
                     </xsl:otherwise>
                 </xsl:choose>
@@ -190,6 +212,7 @@
         <xsl:variable name="relations" as="element(relation)*">
             <xsl:sequence select="root()//relation[if ($direction = 'incoming') then targetClass/@target = $className else sourceClass/@target = $className]"/>    
         </xsl:variable>
+        <xsl:message select="$className||' '||$direction||' '||count($relations)"/>
         <xsl:call-template name="mkRelationsList">
             <xsl:with-param name="relations" select="$relations"/>
             <xsl:with-param name="duplicate" select="true()" as="xs:boolean" tunnel="yes"/>
@@ -199,7 +222,7 @@
     <xsl:template match="class/name"/>
     
     <xsl:template match="properties" mode="mkTable">
-        <table>
+        <table class="table">
             <thead>
                 <tr>
                     <th>Property Name / Occurrences</th>
@@ -256,13 +279,13 @@
         <xsl:param name="relations" as="element(relation)*"/>
         <xsl:param name="duplicate"/>
         <ul>
-           <xsl:apply-templates select="$relations"/>
+           <xsl:apply-templates select="$relations" mode="mkList"/>
         </ul>
     </xsl:template>
     
     <xsl:template name="classByID">
-        <xsl:param name="classID"/>
-        <xsl:variable name="internal" select="root(.)//class[@ID = $classID]"/>
+        <xsl:param name="classID" as="xs:string"/>
+        <xsl:variable name="internal" select="$doc//class[@ID = $classID]"/>
         <xsl:variable name="externalPaths">
             <xsl:value-of select="concat($pathToModelDir,'/classes/',$classID,'.xml')"/>
             <xsl:value-of select="concat($pathToModelDir,'/',$classID,'.xml')"/>
@@ -282,20 +305,20 @@
     
     <xsl:template match="relation" mode="mkList">
         <xsl:variable name="targetClassID" select="targetClass/@target" as="xs:string"/>
-        <xsl:variable name="targetClassDefinition">
+        <xsl:variable name="targetClassDefinition" as="element(class)">
             <xsl:call-template name="classByID">
                 <xsl:with-param name="classID" select="$targetClassID"/>
             </xsl:call-template>
         </xsl:variable>
-        <xsl:variable name="targetClassName" select="$targetClassDefinition/name"/>
+        <xsl:variable name="targetClassName" select="$targetClassDefinition/name" as="xs:string"/>
         
         <xsl:variable name="sourceClassID" select="sourceClass/@target"/>
-        <xsl:variable name="sourceClassDefinition">
+        <xsl:variable name="sourceClassDefinition" as="element(class)">
             <xsl:call-template name="classByID">
                 <xsl:with-param name="classID" select="$sourceClassID"/>
             </xsl:call-template>
         </xsl:variable>
-        <xsl:variable name="sourceClassName" select="$sourceClassDefinition/name"/>
+        <xsl:variable name="sourceClassName" select="$sourceClassDefinition/name" as="xs:string"/>
         <li>
             <a href="#{$sourceClassID}">&lt;<xsl:value-of select="$sourceClassName"/>&gt;</a>
             <xsl:text> </xsl:text>
@@ -313,7 +336,7 @@
     
     <xsl:template match="relations" mode="mkTable">
         <xsl:param name="duplicate" as="xs:boolean" tunnel="yes" select="false()"/>
-        <table>
+        <table class="table">
             <thead>
                 <tr>
                     <th>Source Class</th>
@@ -424,7 +447,7 @@
     </xsl:template>
     
     <xsl:template match="vocabularies" mode="mkTable">
-        <table>
+        <table class="table">
             <thead>
                 <tr>
                     <th>Vocabulary Name</th>
