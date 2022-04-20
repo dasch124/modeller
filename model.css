@@ -1,0 +1,41 @@
+class > name { font-size: larger; margin-bottom: 1em; display: block;}
+
+class > definition, 
+class > note,
+class > mapping, 
+class > examples {display: block; margin-bottom: 1em; border: 1px solid grey; padding: 1em;}
+
+
+properties {display: table; margin-bottom: 1em; }
+
+properties:first-child:before {content: "line";}
+property {display: table-row; }
+property * {display: table-cell; border: 1px solid black;}
+
+definition::before { content: "Definition: ";}
+mapping::before { content: oxy_xpath('concat("Mapping to ",@targetLanguage)');}
+examples::before { content: "Examples: ";}
+properties::before { content: "Properties: ";}
+class > note::before { content: "Note: ";}
+
+
+className, propName, vocabName { text-transform: uppercase; }
+
+p {display: block; margin-bottom: 0.5em;}
+item {display: list-item; }
+list {display: block;list-style: asterisks}
+
+datatypeRef {content: oxy_textfield(
+          edit, '@target',
+          columns, 25 )
+
+}
+
+datatypeRef[vocabRef] {content: oxy_textfield(
+          edit, '@target',
+          columns, 25 )
+          " in vocabulary " oxy_textfield(
+          edit, '@vocabRef',
+          columns, 25 )
+
+}
