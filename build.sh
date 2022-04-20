@@ -325,6 +325,11 @@ case $ACTION in
 		fi
 	;;
 
+	setup)
+		sudo dnf install pandoc graphviz libxml2 xmlstarlet saxon python3-pygments wkhtmltopdf
+		
+	;;
+		
 	*)
 		echo "undefined action '$ACTION'"
 		printHelp
