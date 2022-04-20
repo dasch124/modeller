@@ -1,35 +1,43 @@
 #!/bin/bash
-
-libDir="$scriptdir/lib"
 listingHtmlFilenamePattern="listing_#.html"
 svgFilenamePattern="$listingHtmlFilenamePattern.svg"
 export schemaFilename="model.rng"
 
 setup() {
-	if [ ! -e "$libDir" ]
+	if [ ! -e "$libdir" ]
 	then
-		mkdir "$scriptdir/$libDir"
+		mkdir "$libdir"
 	fi 
-	
-	if [ ! -e "$workingdir" ]
-	then
-		mkdir $workingdir 
-	fi 
+	echo "\$scriptdir=$scriptdir"
+	echo "\$libdir=$libdir"
 
-	if [ ! -f "$libDir/owl-x86_64-linux-snapshot" ]
+
+	if [ ! -f "$libdir/owl-x86_64-linux-snapshot" ]
 	then
-		wget https://github.com/atextor/owl-cli/releases/download/snapshot/owl-x86_64-linux-snapshot -O "$libDir/owl-x86_64-linux-snapshot"
-		chmod u+x "$libDir/owl-x86_64-linux-snapshot"
+		wget https://github.com/atextor/owl-cli/releases/download/snapshot/owl-x86_64-linux-snapshot -O "$libdir/owl-x86_64-linux-snapshot"
+		chmod u+x "$libdir/owl-x86_64-linux-snapshot"
 	fi
+
+	if [ ! -e "$libdir/saxon" ]
+	then
+		mkdir "$libdir/saxon"
+		wget https://altushost-swe.dl.sourceforge.net/project/saxon/Saxon-HE/11/Java/SaxonHE11-3J.zip -O "$libdir/saxon/SaxonHE11-3J.zip"
+		cd "$libdir/saxon"
+		unzip *.zip
+	fi
+	saxon() {
+		java -jar $libdir/saxon/saxon-he-11.3.jar "$1"
+	}
+	export -f saxon
 #
-#	if [ ! -f "$libDir/base64.xsl" ]
+#	if [ ! -f "$libdir/base64.xsl" ]
 #	then
-#		wget https://raw.githubusercontent.com/ilyakharlamov/xslt_base64/master/base64.xsl -O "$libDir/base64.xsl"
+#		wget https://raw.githubusercontent.com/ilyakharlamov/xslt_base64/master/base64.xsl -O "$libdir/base64.xsl"
 #	fi
 #
-#	if [ ! -f "$libDir/base64_binarydatamap.xml" ]
+#	if [ ! -f "$libdir/base64_binarydatamap.xml" ]
 #	then 
-#		wget https://raw.githubusercontent.com/ilyakharlamov/xslt_base64/master/base64_binarydatamap.xml -O "$libDir/base64_binarydatamap.xml"
+#		wget https://raw.githubusercontent.com/ilyakharlamov/xslt_base64/master/base64_binarydatamap.xml -O "$libdir/base64_binarydatamap.xml"
 #	fi
 	return 0
 }
@@ -282,7 +290,18 @@ case ${OPTION} in
 esac
 done
 
-scriptdir="$(dirname "$(readlink -f "$0")")"
+
+
+if [[ -z "$(dirname "$(readlink -f "$0")")" ]];
+then 
+	scriptdir=$(pwd)
+else
+	scriptdir=$(dirname "$(readlink -f "$0")")
+fi
+
+export scriptdir
+echo "\$scriptdir = $scriptdir"
+export libdir="$scriptdir/lib"
 parameters=$parameters 
 
 if [[ $verbose -eq 1 ]]; then
@@ -318,6 +337,11 @@ case $ACTION in
 		else 
 			validate $inputfile
 			modeldir=$(dirname `realpath $inputfile`)
+			export workingdir="$modeldir/tmp"
+			if [ ! -e "$workingdir" ]
+			then
+				mkdir $workingdir 
+			fi 
 			outputfile="$workingdir/$inputfile.dot"
 			dotFilepath=$(toDot "$inputfile")
 			echo "$dotFilepath"
@@ -326,7 +350,8 @@ case $ACTION in
 	;;
 
 	setup)
-		sudo dnf install pandoc graphviz libxml2 xmlstarlet saxon python3-pygments wkhtmltopdf
+		sudo dnf install pandoc graphviz libxml2 xmlstarlet python3-pygments wkhtmltopdf
+		setup 
 		
 	;;
 		
