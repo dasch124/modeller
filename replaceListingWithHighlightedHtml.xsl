@@ -17,10 +17,11 @@
         </xsl:copy>
     </xsl:template>
     
-    <xsl:template match="h:code">
-        <xsl:variable name="position" select="count(preceding::h:code)+1"/>
+    <xsl:template match="h:code[@data-type='listing']">
+        <xsl:variable name="position" select="count(preceding::h:code[@data-type='listing'])+1"/>
         <xsl:variable name="htmlFilename" select="replace($listingHtmlFilenamePattern,'#',xs:string($position))"/>
         <code>
+            <xsl:sequence select="@*"/>
             <xsl:sequence select="doc($htmlFilename)//pre"/>
         </code>
     </xsl:template>

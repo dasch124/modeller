@@ -110,6 +110,8 @@
         </xsl:variable>
         <xsl:value-of select="@ID"/> [
             label = "{<xsl:value-of select="name"/><xsl:value-of select="$props"/>}"
+            labeltooltip = "<xsl:value-of select="replace(string-join((definition),'&#10;'),'&quot;','\\&quot;')"/>"
+            URL = "<xsl:value-of select="concat('#',@ID)"/>"
             <xsl:if test="@type = 'abstract'">
                 color=gray
             </xsl:if>
@@ -137,7 +139,8 @@
         <xsl:variable name="attributes">
             [
             label = "<xsl:value-of select="$label"/>"
-            labeltooltip = "<xsl:value-of select="string-join((note,properties),'&#10;')"/>"
+            URL = "<xsl:value-of select="concat('#',@ID)"/>"
+            labeltooltip = "<xsl:value-of select="replace(string-join((note,properties),'&#10;'),'&quot;','\\&quot;')"/>"
             labelfloat = <xsl:value-of select="$labelfloat"/>
             labeldistance = <xsl:value-of select="$labeldistance"/>
             taillabel = "<xsl:value-of select="sourceClass/arity"/>"
@@ -179,8 +182,13 @@
                 <xsl:for-each select="distinct-values($targetClassID)">
                     <xsl:variable name="t" select="."/>
                     <xsl:value-of select="$s"/> -> <xsl:value-of select="$t"/> [
-                        label = "<xsl:value-of select="string-join($relations/name,'&#10;')"/>"
+                        
+                        <xsl:text>label = "</xsl:text><xsl:value-of select="string-join(current-group()/name,'&#10;')"/><xsl:text>"</xsl:text><!--<xsl:for-each select="$relations">
+<!-\-                            <xsl:text disable-output-escaping="yes">&lt;a href="#</xsl:text><xsl:value-of select="@ID"/><xsl:text disable-output-escaping="yes">"&gt;</xsl:text><xsl:value-of select="name"/><xsl:text disable-output-escaping="yes">&lt;/a&gt;&lt;br/&gt;</xsl:text>-\->
+                            <xsl:value-of select="name"/><xsl:text>&lt;BR/&gt;</xsl:text>
+                        </xsl:for-each>-->
                         labelfloat = <xsl:value-of select="$labelfloat"/>
+                        URL = "<xsl:value-of select="concat('#',current-group()[1]/@ID)"/>"
                         <xsl:if test="$relations/@type = 'implicit'">
                             style=dashed
                             color = gray

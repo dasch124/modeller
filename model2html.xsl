@@ -7,19 +7,48 @@
     exclude-result-prefixes="#all"
     version="2.0">  
     <xsl:param name="debug">false</xsl:param>
-    <xsl:param name="pathToModelDir"/>
-    <xsl:param name="pathToModelDot"/>
+    <xsl:param name="pathToGraphImage"/>
     <xsl:variable name="doc" select="root(.)"/>
-    <xsl:output method="xhtml" indent="yes"/>
+    <xsl:output method="xhtml" indent="yes" include-content-type="yes"/>
     <xsl:strip-space elements="*"/>
-    <xsl:preserve-space elements="p"/>
+    <xsl:preserve-space elements="p note item"/>
     <xsl:function name="_:head">
         <xsl:param name="item" as="item()*"/>
         <xsl:param name="text"/>
-        <xsl:variable name="hl" select="if ($item instance of xs:integer) then $item else count($item/ancestor::*[self::classes|self::class|self::model|self::property|self::relation])"/>
+<!--        <xsl:variable name="hl" select="if ($item instance of xs:integer) then $item else count($item/ancestor::*[self::classes|self::class|self::model|self::property|self::relation|self::groups])"/>-->
+        <xsl:variable name="hl" select="if ($item instance of xs:integer) then $item else count($item/ancestor-or-self::*)"/>
         <xsl:element name="h{$hl}">
+            <xsl:attribute name="class">title is-<xsl:value-of select="$hl"/></xsl:attribute>
             <xsl:value-of select="$text"/>
         </xsl:element>
+    </xsl:function>
+    
+    
+    <xsl:function name="_:entityByID" as="element()?">
+        <xsl:param name="entityID"/>
+        <xsl:call-template name="entityByID">
+            <xsl:with-param name="entityID" select="$entityID"/>
+        </xsl:call-template>
+    </xsl:function>
+    
+    <xsl:function name="_:entityByName" as="element(*)*">
+        <xsl:param name="entityName"/>
+        <xsl:variable name="entity" select="$doc//name[lower-case(.)=lower-case($entityName)]/.."/>
+        <xsl:sequence select="$entity"/>
+    </xsl:function>
+
+    <xsl:function name="_:ancestorsByID">
+        <!-- the ID of the subclass -->
+        <xsl:param name="classID"/>
+        <xsl:variable name="classDef">
+            <xsl:call-template name="entityByID">
+                <xsl:with-param name="entityID" select="$classID"/>
+            </xsl:call-template>
+        </xsl:variable>
+        <xsl:if test="$classDef/@parent != ''">
+            <xsl:sequence select="_:entityByID($classDef/@parent)"/>
+            <xsl:sequence select="_:ancestorsByID($classDef/@parent)"/>
+        </xsl:if>
     </xsl:function>
 
     <xsl:function name="_:head">
@@ -28,62 +57,78 @@
     </xsl:function>
    
     <xsl:template match="/">
+        <xsl:message>$debug = <xsl:value-of select="$debug"/></xsl:message>
         <xsl:if test="$debug = 'true'">
-            <xsl:message>$pathToModelDir = <xsl:value-of select="$pathToModelDir"/></xsl:message>
-            <xsl:message>$pathToModelDot = <xsl:value-of select="$pathToModelDot"/></xsl:message>
+            <xsl:message>$pathToGraphImage = <xsl:value-of select="$pathToGraphImage"/></xsl:message>
         </xsl:if>
         <html>
             <head>
+                <meta charset="utf-8"></meta>
                 <title><xsl:value-of select="/model/meta/title"/></title>
-                <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">&#160;</link>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">&#160;</link>
+                <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom/dist/svg-pan-zoom.min.js"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"></meta>
             </head>
             <body>  
                 <div class="container">
-                    <h1><xsl:value-of select="/model/meta/title"/></h1>
-                    <header>
-                        <table class="table">
-                            <tr>
-                                <td>Author(s): </td>
-                                <td><xsl:value-of select="string-join(//contributor[@role = 'author']/person/name,'&#160;')"/></td>
-                            </tr>
-                            <tr>
-                                <td>Version: </td>
-                                <td><xsl:value-of select="//version"/></td>
-                            </tr>
-                            <tr>
-                                <td>Last Changed: </td>
-                                <td><xsl:value-of select="max(//change/xs:date(@when))"/></td>
-                            </tr>
-                            <tr>
-                                <td>Documentation generated: </td>
-                                <td><xsl:value-of select="current-dateTime()"/></td>
-                            </tr>
-                            <xsl:for-each select="//docProp">
-                                <tr><td><xsl:value-of select="@name"/></td>
-                                    <td><xsl:apply-templates/></td></tr>
-                            </xsl:for-each>
-                        </table>
-                    </header>
-               </div>
-                <main>
-                    <h2>Graphical Overview</h2>
-                    <figure class="figure">
-                        <xsl:choose>
-                            <xsl:when test="ends-with($pathToModelDot,'svg')">
-                                <xsl:sequence select="doc(concat($pathToModelDir,'/',tokenize($pathToModelDot,'/')[last()]))"/>
-                            </xsl:when>
-                            <xsl:otherwise>
-                                <img src="{$pathToModelDot}" class="img-responsive img-fit-contain"/>
-                            </xsl:otherwise>
-                        </xsl:choose>
-                        <figcaption class="figure-caption text-center">Graphical Overview of the data model.<br/>Dashed lines mean implicit shortcut relations.</figcaption>
-                    </figure>
+                    <section class="section">
+                        <h1 class="title is-1"><xsl:value-of select="/model/meta/title"/></h1>
+                        <h2 class="subtitle is-3">Version <xsl:value-of select="/model/meta/version"/></h2>
+                        <header class="header">
+                            <table class="table is-hoverable is-narrow">
+                                <tr class="tr">
+                                    <td>Author(s): </td>
+                                    <td><xsl:value-of select="string-join(//contributor[@role = 'author']/person/name,'&#160;')"/></td>
+                                </tr>
+                                <tr>
+                                    <td>Version: </td>
+                                    <td><xsl:value-of select="//version"/></td>
+                                </tr>
+                                <tr>
+                                    <td>Last Changed: </td>
+                                    <td><xsl:value-of select="max(//change/xs:date(@when))"/></td>
+                                </tr>
+                                <tr>
+                                    <td>Documentation generated: </td>
+                                    <td><xsl:value-of select="current-dateTime()"/></td>
+                                </tr>
+                                <xsl:for-each select="//docProp">
+                                    <tr><td><xsl:value-of select="@name"/></td>
+                                        <td><xsl:apply-templates/></td></tr>
+                                </xsl:for-each>
+                            </table>
+                        </header>
+                    </section>
+                    <section class="section">
+                        <h2 class="title">Graphical Overview</h2>
+                        <figure class="image" style="max-width: 100%; overflow: hidden; position: relative; border: 1px solid gray;">
+                            <xsl:choose>
+                                <xsl:when test="ends-with($pathToGraphImage,'svg')">
+                                    <xsl:sequence select="doc($pathToGraphImage)"/>
+                                </xsl:when>
+                                <xsl:otherwise>
+                                    <img src="{$pathToGraphImage}" class="img-responsive img-fit-contain"/>
+                                </xsl:otherwise>
+                            </xsl:choose>
+                            <figcaption class="figure-caption text-center">Graphical Overview of the data model.<br/>Dashed lines mean implicit shortcut relations.</figcaption>
+                        </figure>
+                    </section>
                     <xsl:apply-templates/>
-                </main>
+                </div>
+                <script><![CDATA[
+                    window.onload = function() {
+                        console.log("here")
+                        var svgElement = document.querySelector('svg')
+                        var panZoomGraph = svgPanZoom(svgElement, {
+                            zoomEnabled: true,
+                            controlIconsEnabled: true
+                        })
+                    };
+                ]]></script>
             </body>
         </html>
     </xsl:template>
-    
+
     <xsl:template match="head">
         <xsl:sequence select="_:head(.)"/>
     </xsl:template>
@@ -104,10 +149,32 @@
     </xsl:template>
     
     <xsl:template match="meta"/>
-    <xsl:template match="description|classes|relations|vocabularies|class/definition|class/examples|class/properties|class/note|datatypes|mapping">
+    
+    <xsl:template match="model/*" priority="-1">
         <xsl:variable name="head" select="concat(upper-case(substring(local-name(.),1,1)),substring(local-name(.),2))"/>
-        <xsl:if test="*">
-            <div>
+        <xsl:sequence select="_:head(.,$head)"/>
+        <xsl:apply-templates/>
+    </xsl:template>
+
+    <xsl:template match="model/description|model/relations">
+        <xsl:variable name="head" select="concat(upper-case(substring(local-name(.),1,1)),substring(local-name(.),2))"/>
+        <h2 class="title is-2"><xsl:value-of select="$head"/></h2>
+        <div class="content">
+            <xsl:choose>
+                <xsl:when test="self::relations">
+                    <xsl:apply-templates mode="mkPar"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:apply-templates/>
+                </xsl:otherwise>
+            </xsl:choose>
+        </div>
+    </xsl:template>
+    
+    <xsl:template match="class/definition|class/examples|class/properties|class/relations|model/vocabularies|model/datatypes">
+        <xsl:variable name="head" select="concat(upper-case(substring(local-name(.),1,1)),substring(local-name(.),2))"/>
+        <xsl:if test="node()">
+            <div class="{if (parent::model) then 'section' else 'content'}">
                 <xsl:choose>
                     <xsl:when test="self::vocabularies or self::datatypes">
                         <xsl:sequence select="_:head(., $head)"/>
@@ -121,57 +188,114 @@
                         <xsl:sequence select="_:head(., $head)"/>
                         <xsl:apply-templates select="." mode="mkTable"/>
                     </xsl:when>
-                    <xsl:when test="self::note[parent::class]">
+                    <!-- moving to a template producing a "info box" -->
+                    <!--<xsl:when test="self::note[parent::class]">
                         <xsl:sequence select="_:head(., 'Remarks on this class')"/>
                         <xsl:apply-templates/>
-                    </xsl:when>
-                    <xsl:when test="self::mapping">
-                        <xsl:sequence select="_:head(., concat($head, ' to ', @targetLanguage, if (@version = '') then '' else concat(' v. ',@version)))"/>
-                        <p><xsl:apply-templates select="@* except (@targetLanguage, @version)"/></p>
-                        <xsl:apply-templates select="node()"/>
-                    </xsl:when>
+                    </xsl:when>-->
                     <xsl:otherwise>
                         <xsl:sequence select="_:head(., $head)"/>
-                        <xsl:apply-templates select="node()"/>
+                        <xsl:apply-templates/>
                     </xsl:otherwise>
                 </xsl:choose>
             </div>
         </xsl:if>
     </xsl:template>
     
-    <xsl:template match="mapping/@level">
-        <xsl:text>Mapping Level: </xsl:text><xsl:value-of select="."/>
+    <xsl:template match="note" mode="inCell">
+        <xsl:apply-templates/>
     </xsl:template>
-    <xsl:template match="mapping/note[not(*)]">
+    
+    <xsl:template match="CHECKME|TODO|note">
+        <xsl:variable name="tag-color">
+            <xsl:choose>
+                <xsl:when test="local-name(.) = 'CHECKME'">is-danger</xsl:when>
+                <xsl:when test="self::note[parent::class]">is-info</xsl:when>
+                <xsl:otherwise>is-warning</xsl:otherwise>
+            </xsl:choose>
+        </xsl:variable>
+        <div class="box">
+            <span class="tag {$tag-color} is-light"><xsl:value-of select="local-name()"/></span>&#160;<xsl:apply-templates/>
+            <p class="is-size-7 has-text-right has-text-weight-light"><xsl:for-each select="@*"><xsl:value-of select="concat(local-name(),': ', .,'&#160;')"/></xsl:for-each></p>
+        </div>
+    </xsl:template>
+    
+    <xsl:template match="reference">
+        <blockquote><xsl:apply-templates/></blockquote>
+    </xsl:template>
+    
+    <xsl:template match="class/examples/example">
+        <xsl:call-template name="mkExample"/>
+    </xsl:template>
+    
+    <xsl:template match="mapping">
+        <xsl:sequence select="_:head(.,concat('Mapping to ',$doc//reference[@ID = current()/@targetLanguage]//name))"/>
+        <p class="content">
+            <xsl:apply-templates select="@* except @targetLanguage"/>
+        </p>
+        <p class="block"><xsl:apply-templates select="node()"/></p>
+    </xsl:template>
+    <xsl:template match="mapping/@targetLanguage"/>
+        
+    <xsl:template match="mapping/@level">
+        <span class="strong">Mapping Level:</span> <xsl:value-of select="."/><br/>
+    </xsl:template>
+    <xsl:template match="mapping/@version">
+        <span class="strong">Version: </span><xsl:value-of select="."/><br/>
+    </xsl:template>
+    <!--<xsl:template match="note[not(*)]">
         <p>NB: <xsl:apply-templates/></p>
     </xsl:template>
     <xsl:template match="mapping/note[*]">
         NB: <xsl:apply-templates/>
-    </xsl:template>
+    </xsl:template>-->
     
-    <xsl:template match="code">
+    <xsl:template match="mapping/code|example/code">
+        <!-- WATCHME do not remove data-type="listing" here because it will be used 
+            by the builder script for code-highlighting -->
         <pre style="border: 1px solid black;">
-            <code>
+            <code data-type="listing">
                 <xsl:sequence select="node()"/>
             </code>
         </pre>
     </xsl:template>
     
+    
+    
+    <xsl:template name="classDependencies">
+        <xsl:if test="@parent != ''">
+            <xsl:variable name="parentClassDef" select="_:entityByID(@parent)"/>
+            <xsl:variable name="parentClassLink" as="element()">
+                <className xmlns="" target="{@parent}"><xsl:value-of select="$parentClassDef/name"/></className>
+            </xsl:variable>
+            <p class="block"><strong>Subclass of: </strong><xsl:apply-templates select="$parentClassLink"/></p>
+            <xsl:apply-templates select="_:ancestorsByID(@parent)//properties"/>
+        </xsl:if>
+        <xsl:if test="exists(//relation[@parent = current()/@ID])">
+            <p>Superclass of 
+                <xsl:for-each select="//relation[@parent = current()/@ID]">
+                    <a href="#{@ID}"><xsl:value-of select="name"/></a>
+                </xsl:for-each>
+            </p>
+        </xsl:if>
+    </xsl:template>
+    
     <xsl:template match="class">
-        <div>
+        <div class="section">
             <a id="{@ID}"/>
-            <xsl:sequence select="_:head(., name)"/>
-            <xsl:apply-templates/>
-            
+            <xsl:apply-templates select="name"/>
+            <xsl:call-template name="classDependencies"/>
+            <xsl:apply-templates select="* except name"/>
             <xsl:variable name="relsOut">
                 <xsl:call-template name="filterRelations">
-                    <xsl:with-param name="className" select="name"/>
+                    <xsl:with-param name="classID" select="@ID"/>
                     <xsl:with-param name="direction" select="'outgoing'"/>
+                    <xsl:with-param name="includeInherited" select="true()"/>
                 </xsl:call-template>
             </xsl:variable>
             
-            <div>
-                <xsl:sequence select="_:head(3, 'Relations (outgoing)')"/>
+            <div class="content">
+                <xsl:sequence select="_:head(4, 'Relations (outgoing)')"/>
                 <xsl:choose>
                     <xsl:when test="not($relsOut//html:li)">
                         <p>No outgoing relations defined.</p>
@@ -184,13 +308,15 @@
                         
             <xsl:variable name="relsIn">
                 <xsl:call-template name="filterRelations">
-                    <xsl:with-param name="className" select="name"/>
+                    <xsl:with-param name="classID" select="@ID"/>
                     <xsl:with-param name="direction" select="'incoming'"/>
+                    <xsl:with-param name="includeInherited" select="true()"/>
                 </xsl:call-template>
             </xsl:variable>
+            
 
-            <div>
-                <xsl:sequence select="_:head(3, 'Relations (incoming)')"/>
+            <div class="content">
+                <xsl:sequence select="_:head(4, 'Relations (incoming)')"/>
                 <xsl:choose>
                     <xsl:when test="not($relsIn//html:li)">
                         <p>No outgoing relations defined.</p>
@@ -200,29 +326,45 @@
                     </xsl:otherwise>
                 </xsl:choose>
             </div>
-            <xsl:if test="@parent!=''">
-                <p>(TODO list inherited properties and relations)</p>
-            </xsl:if>
         </div>
     </xsl:template>
     
     <xsl:template name="filterRelations">
-        <xsl:param name="className"/>
+        <xsl:param name="classID" as="attribute(ID)+"/>
         <xsl:param name="direction"/>
+        <xsl:param name="includeInherited" as="xs:boolean"/>
         <xsl:variable name="relations" as="element(relation)*">
-            <xsl:sequence select="root()//relation[if ($direction = 'incoming') then targetClass/@target = $className else sourceClass/@target = $className]"/>    
+            <xsl:sequence select="root()//relation[if ($direction = 'incoming') then targetClass/@target = $classID else sourceClass/@target = $classID]"/>
+            <xsl:if test="$includeInherited">
+                <xsl:variable name="classDef">
+                    <xsl:call-template name="entityByID">
+                        <xsl:with-param name="entityID" select="$classID"/>
+                    </xsl:call-template>
+                </xsl:variable>
+                <xsl:variable name="parent" select="$classDef/@parent"/>
+                <xsl:if test="$parent != ''">
+                    <xsl:call-template name="filterRelations">
+                        <xsl:with-param name="classID" select="$parent"/>
+                        <xsl:with-param name="direction" select="$direction"/>
+                        <xsl:with-param name="includeInherited" select="true()"/>
+                    </xsl:call-template>
+                </xsl:if>
+            </xsl:if>
         </xsl:variable>
-        <xsl:message select="$className||' '||$direction||' '||count($relations)"/>
+        <xsl:message select="$classID||' '||$direction||' '||count($relations)"/>
         <xsl:call-template name="mkRelationsList">
             <xsl:with-param name="relations" select="$relations"/>
             <xsl:with-param name="duplicate" select="true()" as="xs:boolean" tunnel="yes"/>
         </xsl:call-template>
     </xsl:template>
     
-    <xsl:template match="class/name"/>
+    
+    <xsl:template match="class/name">
+        <xsl:sequence select="_:head(.., concat('Class: &quot;',.,'&quot;'))"/>
+    </xsl:template>
     
     <xsl:template match="properties" mode="mkTable">
-        <table class="table">
+        <table class="table table-ho">
             <thead>
                 <tr>
                     <th>Property Name / Occurrences</th>
@@ -243,7 +385,7 @@
                 <xsl:text>Occurrences: </xsl:text><xsl:value-of select="arity"/> 
             </td>
             <td><xsl:apply-templates select="datatypeRef"/></td>
-            <td><xsl:apply-templates select="note"/></td>
+            <td><xsl:apply-templates select="note" mode="inCell"/></td>
         </tr>
     </xsl:template>
     
@@ -255,12 +397,39 @@
     
     <xsl:template match="property" mode="mkPar">
         <div class="property">
-            <p><a id="{@ID}"/>Property: <b><xsl:value-of select="name"/></b><br/>
-                Occurrences: <xsl:value-of select="arity"/><br/>
-                Datatype: <xsl:apply-templates select="datatypeRef"/>
-            </p>
-            <p>Remarks:</p>
-            <xsl:apply-templates select="note"/></div>
+            <p class="title is-6"><a id="{@ID}"/>Property: <b><xsl:value-of select="name"/></b></p>
+            <dl>
+                <dt>Occurrences:</dt>
+                <dd><xsl:value-of select="arity"/></dd>
+                <td>Datatype:</td>
+                <dd><xsl:apply-templates select="datatypeRef"/></dd>
+            </dl>
+            <xsl:apply-templates select="note"/>
+        </div>
+    </xsl:template>
+    
+    <xsl:template match="groups">
+        <div class="content">
+            <xsl:sequence select="_:head(.,'Groups')"/>
+            <xsl:apply-templates/>
+        </div>
+    </xsl:template>
+    
+    <xsl:template match="group">
+        <a id="{@ID}"/>
+        <xsl:sequence select="_:head(., concat('Group: &quot;',name,'&quot;'))"/>
+        <p class="block">
+            <xsl:apply-templates select="description"/>
+            <strong>Group Members: </strong>
+            <!--<ul>-->
+                <xsl:for-each select="className">
+<!--                    <li>-->
+                        <xsl:apply-templates select="."/>
+                    <xsl:if test="following-sibling::*">,&#160;</xsl:if>
+                    <!--</li>-->
+                </xsl:for-each>
+            <!--</ul>-->
+        </p>
     </xsl:template>
     
     
@@ -283,22 +452,15 @@
         </ul>
     </xsl:template>
     
-    <xsl:template name="classByID">
-        <xsl:param name="classID" as="xs:string"/>
-        <xsl:variable name="internal" select="$doc//class[@ID = $classID]"/>
-        <xsl:variable name="externalPaths">
-            <xsl:value-of select="concat($pathToModelDir,'/classes/',$classID,'.xml')"/>
-            <xsl:value-of select="concat($pathToModelDir,'/',$classID,'.xml')"/>
-        </xsl:variable> 
+    <xsl:template name="entityByID">
+        <xsl:param name="entityID" as="xs:string"/>
+        <xsl:variable name="internal" select="$doc//@ID[. = $entityID]/.."/>
         <xsl:choose>
             <xsl:when test="exists($internal)">
                 <xsl:sequence select="$internal"/>
             </xsl:when>
-            <xsl:when test="some $path in $externalPaths satisfies doc-available($path)">
-                <xsl:sequence select="$externalPaths[doc-available(.)]"/>
-            </xsl:when>
             <xsl:otherwise>
-                <xsl:message terminate="yes">class <xsl:value-of select="$classID"/> not found</xsl:message>
+                <xsl:message terminate="yes">entity <xsl:value-of select="$entityID"/> not found</xsl:message>
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
@@ -306,16 +468,16 @@
     <xsl:template match="relation" mode="mkList">
         <xsl:variable name="targetClassID" select="targetClass/@target" as="xs:string"/>
         <xsl:variable name="targetClassDefinition" as="element(class)">
-            <xsl:call-template name="classByID">
-                <xsl:with-param name="classID" select="$targetClassID"/>
+            <xsl:call-template name="entityByID">
+                <xsl:with-param name="entityID" select="$targetClassID"/>
             </xsl:call-template>
         </xsl:variable>
         <xsl:variable name="targetClassName" select="$targetClassDefinition/name" as="xs:string"/>
         
         <xsl:variable name="sourceClassID" select="sourceClass/@target"/>
         <xsl:variable name="sourceClassDefinition" as="element(class)">
-            <xsl:call-template name="classByID">
-                <xsl:with-param name="classID" select="$sourceClassID"/>
+            <xsl:call-template name="entityByID">
+                <xsl:with-param name="entityID" select="$sourceClassID"/>
             </xsl:call-template>
         </xsl:variable>
         <xsl:variable name="sourceClassName" select="$sourceClassDefinition/name" as="xs:string"/>
@@ -331,7 +493,7 @@
     
     <xsl:template match="relations" mode="mkPar">
         <xsl:param name="duplicate" as="xs:boolean" tunnel="yes" select="false()"/>
-        <xsl:apply-templates mode="#current"/>
+        <div class="content"><xsl:apply-templates mode="#current"/></div>
     </xsl:template>
     
     <xsl:template match="relations" mode="mkTable">
@@ -355,34 +517,68 @@
         <xsl:param name="duplicate" as="xs:boolean" tunnel="yes" select="false()"/>
         <xsl:variable name="targetClassID" select="targetClass/@target"/>
         <xsl:variable name="targetClassDefinition">
-            <xsl:call-template name="classByID">
-                <xsl:with-param name="classID" select="$targetClassID"/>
+            <xsl:call-template name="entityByID">
+                <xsl:with-param name="entityID" select="$targetClassID"/>
             </xsl:call-template>
         </xsl:variable>
         <xsl:variable name="targetClassName" select="$targetClassDefinition/class/name"/>
         
         <xsl:variable name="sourceClassID" select="sourceClass/@target"/>
         <xsl:variable name="sourceClassDefinition">
-            <xsl:call-template name="classByID">
-                <xsl:with-param name="classID" select="$sourceClassID"/>
+            <xsl:call-template name="entityByID">
+                <xsl:with-param name="entityID" select="$sourceClassID"/>
             </xsl:call-template>
         </xsl:variable>
         <xsl:variable name="sourceClassName" select="$sourceClassDefinition/class/name"/>
-        <a id="{@ID}"/>
-        <h4><xsl:value-of select="name"/><xsl:if test="@type"><xsl:value-of select="concat(' (',@type,')')"/></xsl:if></h4>
+        
+        
+        
+            <a id="{@ID}"/>
+            <xsl:sequence select="_:head(.,concat(name,if(@type='implicit')then'*' else''))"/>
+            <!--<h4 class="title is-4"><xsl:value-of select="name"/><xsl:if test="@type"><xsl:value-of select="concat(' (',@type,')')"/></xsl:if></h4>-->
+            <p class="subtitle"><xsl:value-of select="reverseName"/></p>
+            <p><strong>Occurrences: </strong>
+                <xsl:value-of select="string-join(*/arity,' / ')"/><br/>
+                <strong>Source Class: </strong>
+                <a href="#{$sourceClassID}"><xsl:value-of select="$sourceClassName"/></a><br/>
+                <strong>Target Class: </strong>
+                <a href="#{$targetClassID}"><xsl:value-of select="$targetClassName"/></a>
+            </p>
+                <xsl:if test="properties/*">
+                    <div class="section"><xsl:sequence select="_:head(properties, 'Properties')"/>
+                    <xsl:apply-templates select="properties" mode="mkPar"/></div>
+                </xsl:if>
+                <xsl:if test="note!=''">
+                    <xsl:apply-templates select="note"/>
+                </xsl:if>
+                <xsl:if test="CHCEKME!=''">
+                    <xsl:apply-templates select="CHCEKME"/>
+                </xsl:if>
+                <xsl:if test="TODO!=''">
+                    <xsl:apply-templates select="TODO"/>
+                </xsl:if>
+            <xsl:apply-templates select="examples" mode="#current"/>
+        
+        
 <!--        <xsl:call-template name="classDependencies"/>-->
-        <p>
-            Occurrences: <xsl:value-of select="string-join(*/arity,' / ')"/><br/>
-            Source Class: <a href="#{$sourceClassID}"><xsl:value-of select="$sourceClassName"/></a><br/>
-            Target Class: <a href="#{$targetClassID}"><xsl:value-of select="$targetClassName"/></a><br/>
-            Reverse Name: <xsl:value-of select="reverseName"/><br/>
-            <xsl:if test="properties/*">
-                Properties: <br/><xsl:apply-templates select="properties" mode="mkTable"/><br/>
-            </xsl:if>
-            <xsl:if test="note!=''">
-                Remarks: <xsl:apply-templates select="note"/>
-            </xsl:if>
-        </p>
+        
+    </xsl:template>
+    
+    
+    <xsl:template match="relation/examples" mode="mkPar">
+        <xsl:sequence select="_:head(.,'Examples')"/>
+        <xsl:apply-templates mode="#current"/>
+    </xsl:template>
+    
+    <xsl:template name="mkExample">
+        <div class="block">
+            <blockquote><xsl:apply-templates/></blockquote>
+            <p class="is-size-6 has-text-right">Example #<xsl:value-of select="count(preceding-sibling::example)+1"/></p>
+        </div>
+    </xsl:template>
+    
+    <xsl:template match="relation/examples/example" mode="mkPar">
+        <xsl:call-template name="mkExample"/>
     </xsl:template>
     
     <xsl:template match="relation" mode="mkTable">
@@ -394,8 +590,6 @@
         <xsl:variable name="sourceClassID" select="sourceClass/@target"/>
         <xsl:variable name="sourceClassDefinition" select="doc(concat('classes/',$sourceClassID,'.xml'))"/>
         <xsl:variable name="sourceClassName" select="$sourceClassDefinition/class/name"/>
-        
-        
         <tr>
             <td>
                 <xsl:if test="not($duplicate)">
@@ -412,25 +606,12 @@
                 </a>&#160;
                 (<xsl:value-of select="targetClass/arity"/>)</td>
             <td><xsl:apply-templates select="properties" mode="inCell"/></td>
-            <td><xsl:apply-templates select="note"/>
+            <td><xsl:apply-templates select="note" mode="inCell"/>
 <!--                <xsl:call-template name="classDependencies"/>-->
             </td>
         </tr>
     </xsl:template>
     
-    
-    <xsl:template name="classDependencies">
-        <xsl:if test="@parent!=''">
-            <p>Subclass of <a href="#{@parent}"><xsl:value-of select="id(current()/@parent)//name"/></a></p>
-        </xsl:if>
-        <xsl:if test="exists(//relation[@parent = current()/@ID])">
-            <p>Superclass of 
-                <xsl:for-each select="//relation[@parent = current()/@ID]">
-                    <a href="#{@ID}"><xsl:value-of select="name"/></a>
-                </xsl:for-each>
-            </p>
-        </xsl:if>
-    </xsl:template>
     
     <xsl:template match="properties" mode="inCell">
         <xsl:apply-templates mode="#current"/>
@@ -460,7 +641,7 @@
                     <tr>
                         <td><a id="{@ID}"/><xsl:apply-templates select="name"/></td>
                         <td><xsl:value-of select="string-join(values//item,' / ')"/></td>
-                        <td><xsl:apply-templates select="note"/></td>
+                        <td><xsl:apply-templates select="note" mode="inCell"/></td>
                     </tr>
                 </xsl:for-each>
             </tbody>
@@ -476,7 +657,7 @@
     </xsl:template>
     
     <xsl:template match="p">
-        <p><xsl:apply-templates/></p>
+        <p class="block"><xsl:apply-templates/></p>
     </xsl:template>
     
     <xsl:template match="list">
@@ -510,12 +691,47 @@
     </xsl:template>
     
     <xsl:template match="datatypes" mode="mkTable">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Used by</th>
+                    <th>Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+                <xsl:apply-templates mode="#current">
+                    <xsl:sort select="name"/>
+                </xsl:apply-templates>
+            </tbody>
+        </table>
+    </xsl:template>
+    
+    <xsl:template match="datatypes" mode="mkPar">
         <xsl:apply-templates>
             <xsl:sort select="name"/>
         </xsl:apply-templates>
     </xsl:template>
     
-    <xsl:template match="datatype">
+    <xsl:template match="datatype" mode="mkTable">
+        <xsl:variable name="users" select="//property[datatypeRef/@target = current()/@ID]" as="item()*"/>
+        <tr>
+            <td><a id="{@ID}"/><xsl:value-of select="name"/></td>
+            <td>
+                <xsl:for-each select="$users">
+                    <xsl:sort select="ancestor::class|ancestor::relation" order="ascending"/>
+                    <xsl:sort select="name" order="ascending"/>
+                    <a href="#{@ID}"><xsl:value-of select="ancestor::*[@ID][1]/@ID"/><xsl:text>.</xsl:text><xsl:value-of select="name"/></a>
+                    <xsl:if test="position() lt count($users)">, </xsl:if>
+                </xsl:for-each>
+            </td>
+            <td>
+                <xsl:apply-templates select="note" mode="inCell"/>
+            </td>
+        </tr>
+    </xsl:template>
+    
+    <xsl:template match="datatype" mode="mkPar">
         <xsl:variable name="users" select="//property[datatypeRef/@target = current()/@ID]" as="item()*"/>
         <p>
             <a id="{@ID}"/>
@@ -531,7 +747,103 @@
         </p>
     </xsl:template>
     
-   <xsl:template match="className | fieldName | vocabName | propName | relName">
-       <a role="{local-name()}" href="#{if (@target) then @target else .}"><xsl:value-of select="."/></a>
+   <xsl:template match="className | fieldName | vocabName | propName | relName | instanceName">
+       <xsl:call-template name="formatName"/>
+   </xsl:template>
+    
+   <xsl:template name="formatName">
+       <xsl:param name="entityType" as="xs:string?"/>
+       <xsl:variable name="isExternal" select="matches(.,concat('^(',string-join($doc//namespaces/namespace/@prefix/concat(.,':'),'|'),')'))"/>
+       <xsl:choose>
+           <xsl:when test="$isExternal">
+               <code><xsl:value-of select="."/></code>
+           </xsl:when>
+           <xsl:otherwise>
+               <xsl:variable name="entityType" select="if ($entityType != '') then $entityType else local-name(.)"/>
+               <xsl:variable name="entityDef" as="element()?">
+                   <xsl:choose>
+                       <xsl:when test="normalize-space(@target) != ''">
+                           <xsl:sequence select="_:entityByID(@target)"/>
+                       </xsl:when>
+                       <xsl:when test=". != ''">
+                           <xsl:sequence select="_:entityByName(.)"/>
+                       </xsl:when>
+                   </xsl:choose>
+               </xsl:variable>
+               <xsl:if test="not($entityDef)">
+                   <xsl:message select="."/>
+                   <xsl:message terminate="yes">UNKNOWN enity with name <xsl:value-of select="upper-case($entityType)"/></xsl:message>
+               </xsl:if>
+               
+               <xsl:variable name="entityName">
+                   <!-- if it the reference contains text, we just use that, otherwise 
+                       we take the name of the entity -->
+                   <xsl:choose>
+                       <xsl:when test=". != ''">
+                           <xsl:value-of select="."/>
+                       </xsl:when>
+                       <xsl:when test="@target != ''">
+                           <xsl:value-of select="$entityDef/name"/>
+                       </xsl:when>
+                       <xsl:otherwise>UNKNOWN_<xsl:value-of select="upper-case($entityType)"/></xsl:otherwise>
+                   </xsl:choose>
+               </xsl:variable>
+               
+               
+               <xsl:variable name="formattedContent">
+                   <xsl:choose>
+                       <xsl:when test="$entityType = 'className'">&lt;<xsl:value-of select="upper-case($entityName)"/>&gt;</xsl:when>
+                       <xsl:when test="$entityType = 'instanceName'"><xsl:value-of select="$entityName"/></xsl:when>
+                       <xsl:when test="$entityType = 'relName' and @target != ''">
+                           <xsl:variable name="relationID" select="@target" as="xs:string"/>
+                           <xsl:variable name="relation" select="_:entityByID($relationID)" as="element(relation)"/>
+                           <xsl:variable name="sourceClass" select="_:entityByID($relation/sourceClass/@target)" as="element(class)"/>
+                           <xsl:variable name="targetClass" select="_:entityByID($relation/targetClass/@target)" as="element(class)"/>
+                           <xsl:for-each select="$sourceClass/name">
+                               <xsl:call-template name="formatName">
+                                   <xsl:with-param name="entityType">className</xsl:with-param>
+                               </xsl:call-template>
+                           </xsl:for-each>
+                           <i><a role="{local-name()}" href="#{$entityDef/@ID}"><xsl:value-of select="$entityName"/></a></i>
+                           <xsl:for-each select="$targetClass/name">
+                               <xsl:call-template name="formatName">
+                                   <xsl:with-param name="entityType">className</xsl:with-param>
+                               </xsl:call-template>
+                           </xsl:for-each>
+                       </xsl:when>
+                       <xsl:otherwise><xsl:value-of select="$entityName"/></xsl:otherwise>
+                   </xsl:choose>
+               </xsl:variable>
+               
+               
+               <xsl:choose>
+                   <xsl:when test="$entityType = 'relName'">
+                       <xsl:sequence select="$formattedContent"/>
+                   </xsl:when>
+                   <xsl:when test="@target != ''">
+                       <a role="{local-name()}" href="#{@target}">
+                           <xsl:sequence select="$formattedContent"/>
+                       </a>
+                   </xsl:when>
+                   <xsl:when test="exists(_:entityByName(.))">
+                       <xsl:variable name="entityByName" select="_:entityByName(.)"/>
+                       <xsl:choose>
+                           <xsl:when test="count($entityByName) gt 1">
+                               <xsl:message>More than one entity found for name '<xsl:value-of select="."/>'</xsl:message>
+                               <xsl:sequence select="$formattedContent"/>
+                           </xsl:when>
+                           <xsl:otherwise>
+                               <a href="#{$entityByName/@ID}"><xsl:sequence select="$formattedContent"/></a>
+                           </xsl:otherwise>
+                       </xsl:choose>
+                   </xsl:when>
+                   <xsl:otherwise>
+                       <code><xsl:sequence select="$formattedContent"/></code>
+                   </xsl:otherwise>
+               </xsl:choose>
+               
+           </xsl:otherwise>
+       </xsl:choose>
+       <xsl:if test="self::instanceName[@classRef]"> (a <a href="#{@classRef}">&lt;<xsl:value-of select="_:entityByID(@classRef)/upper-case(name)"/>&gt;</a>)</xsl:if>
    </xsl:template>
 </xsl:stylesheet>

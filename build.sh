@@ -1,5 +1,7 @@
 #!/bin/bash
 listingHtmlFilenamePattern="listing_#.html"
+listingsXPathExpr="h:code[@data-type='listing']"
+listingsXPathExprM="//code"
 export schemaFilename="model.rng"
 
 setup() {
@@ -38,6 +40,7 @@ setup() {
 }
 
 saxon() {
+	debug "saxon $@"
 	java -jar $libdir/saxon/saxon-he-11.3.jar $@
 }
 
@@ -46,8 +49,8 @@ expandModel() {
 	# model=path to the model document
 	model=$1
 	output="$workingdir/modelFull.xml"
-	debug "xmlstarlet tr --xinclude "$scriptdir/it.xsl" $model > $output"
-	xmlstarlet tr --xinclude "$scriptdir/it.xsl" $model > $output
+	debug "saxon -s:$model -xsl:"$scriptdir/it.xsl" -o:"$output" -xi:on"
+	saxon -s:$model -xsl:"$scriptdir/it.xsl" -o:"$output" -xi:on
 	echo $output
 }	
 
@@ -59,19 +62,19 @@ highlight() {
 	debug "** highlighting code listings **"
 	debug "\$html=$html"
 	debug "\$model=$model"
-	c=`xmlstarlet sel --xinclude -N h='http://www.w3.org/1999/xhtml' -t -v "count(//h:code)" $html`
+	c=`xmlstarlet sel --xinclude -N h='http://www.w3.org/1999/xhtml' -t -v "count(//$listingsXPathExpr)" $html`
 	for i in $(seq "$c"); do 
-		lang=`xmlstarlet sel -t -v "(//code)[$i]/@language" $model`
-		name=`xmlstarlet sel -t -v "(//code)[$i]/ancestor::*[name]/name" $model`
+		lang=`xmlstarlet sel -N h='' -t -v "($listingsXPathExprM)[$i]/@language" $model`
+		name=`xmlstarlet sel -N h='' -t -v "($listingsXPathExprM)[$i]/ancestor::*[name]/name" $model`
 		listingHtml=`echo $listingHtmlFilenamePattern | sed -r "s/#/$i/"`
 		if [[ -z $name ]];
 		then 
-			echo "no \$name found for //h:code[$i] – exiting"
-			xmlstarlet sel -t -v "(//code)[$i]/parent::*" $model
+			echo "no \$name found for $listingsXPathExprM[$i] – exiting"
+			xmlstarlet sel -t -v "($listingsXPathExprM)[$i]/parent::*" $model
 			exit 1
 		fi
 		debug "processing code example number $i: $lang / $name > $workingdir/$listingHtml"
-		code=`xmlstarlet sel -N h='http://www.w3.org/1999/xhtml' -t -c "(//h:code)[$i]/node()" $html`
+		code=`xmlstarlet sel -N h='http://www.w3.org/1999/xhtml' -t -c "(//$listingsXPathExpr)[$i]/node()" $html`
 		doFormat "$code" $lang | doHighlight $lang > "$workingdir/$listingHtml"
 	done
 }
@@ -86,7 +89,7 @@ doHighlight(){
 		debug "no \$lang provided, passing on as-is "
 		echo "<div>$1</div>"
 	else 
-		debug "pygmentize -O noclasses -f html -l $lang | xmllint --html --xmlout - | xmlstarlet sel -t -c "//div[@class = 'highlight']""
+		debug "pygmentize -O noclasses -f html -l $lang | xmllint --html --xmlout - | xmlstarlet sel -t -c //div[@class = 'highlight']"
 		pygmentize -O noclasses -f html -l $lang | xmllint --html --xmlout - | xmlstarlet sel -t -c "//div[@class = 'highlight']"
 	fi
 }
@@ -117,7 +120,7 @@ toImg() {
 	debug "\$html=$html"
 	debug "\$format=$format"
 	
-	c=`xmlstarlet sel --xinclude -N h='http://www.w3.org/1999/xhtml' -t -v "count(//h:code)" $html`
+	c=`xmlstarlet sel --xinclude -N h='http://www.w3.org/1999/xhtml' -t -v "count(//$listingsXPathExpr)" $html`
 	for i in $(seq "$c"); do 
 		listingHtmlFilename=`echo $listingHtmlFilenamePattern | sed -r "s/#/$i/"`
 		imgFilename=`echo $imgFilenamePattern | sed -r "s/#/$i/"`
@@ -130,58 +133,68 @@ toImg() {
 embedImgs() {
 	html=$1
 	imgDataXML="$workingdir/imageData.xml"
-	echo "*** embedImgs() ***"
 	debug "*** embedImgs() ***"
 	debug "\$imgDataXML=$imgDataXML"
 	debug "\$workingdir=$workingdir"
+	debug "\$html=$html"
 	echo "<_>" > $imgDataXML
-	c=`xmlstarlet sel --xinclude -N h='http://www.w3.org/1999/xhtml' -t -v "count(//h:code)" $html`
+	c=`xmlstarlet sel --xinclude -N h='http://www.w3.org/1999/xhtml' -t -v "count(//$listingsXPathExpr)" $html`
+	debug "found $c images in $html"
 	for i in $(seq "$c"); do 
 		listingHtmlFilename=`echo $listingHtmlFilenamePattern | sed -r "s/#/$i/"`
-		#imgFilename=`echo $imgFilenamePattern | sed -r "s/#/$i/"`
-		echo "<img format='image/$img' src='"$workingdir/$listingHtmlFilename"'>" >> $imgDataXML
-		cat "$workingdir/$listingHtmlFilename" | wkhtmltoimage -f $imgFormat - "$workingdir/$imgFilename" | base64 
-		base64 "$workingdir/$imgFilename" >> $imgDataXML
+		imgFilename=`echo $imgFilenamePattern | sed -r "s/#/$i/"`
+		echo "<img format='image/$imgFormat' src='"$workingdir/$listingHtmlFilename"'>" >> $imgDataXML
+		cat "$workingdir/$listingHtmlFilename" | wkhtmltoimage -f $imgFormat - "$workingdir/$imgFilename" 
+		if [ $imgFormat != "svg" ];
+		then 
+			debug "base64 "$workingdir/$imgFilename" >> $imgDataXML"
+			base64 "$workingdir/$imgFilename" >> $imgDataXML
+		else 
+			xmlstarlet sel -N svg='http://www.w3.org/2000/svg' -t -c "//svg:svg" "$workingdir/$imgFilename" >> $imgDataXML
+		fi
 		echo "</img>" >> $imgDataXML
 		echo "" >> $imgDataXML
 	done
 
-	c=`xmlstarlet sel -N h='http://www.w3.org/1999/xhtml' -t -v "count(//h:img)" $html`
+	c=`xmlstarlet sel -N h='http://www.w3.org/1999/xhtml' -t -v "count(//h:img[@src])" $html`
 	for i in $(seq "$c"); do 
-		src=`xmlstarlet sel -N h='http://www.w3.org/1999/xhtml' -t -v "(//h:img)[$i]/@src" $html`
-		mimetype=`file -b --mime-type "$workingdir/$src"`
+		src=`xmlstarlet sel -N h='http://www.w3.org/1999/xhtml' -t -v "(//h:img[@src])[$i]/@src" $html`
+		mimetype=`file -b --mime-type "$src"`
 		echo "<img format='$mimetype' src='$src'>" >> $imgDataXML
-		base64 "$workingdir/$src" >> $imgDataXML
+		debug "base64 "$src" >> $imgDataXML $mimetype"
+		base64 "$src" >> $imgDataXML
 		echo "</img>" >> $imgDataXML
 		echo "" >> $imgDataXML
 	done
 	
 	echo "</_>" >> $imgDataXML
 
-	debug "saxon -xsl:"$scriptdir/injectListing.xsl" -p imgFilnamePattern=$imgFilenamePattern pathToImageDataXML="$imgDataXML" workingdir="$workingdir" -o:$html $html"
-	saxon -xsl:"$scriptdir/injectListing.xsl" -p imgFilnamePattern=$imgFilenamePattern pathToImageDataXML="$imgDataXML" workingdir="$workingdir" -o:$html $html 
+	cat "$scriptdir/injectListing.xsl.tmpl" | while read line;  do echo "${line/\$listingsXPathExpr/$listingsXPathExpr}"; done > "$workingdir/injectListing.xsl"
+	
+	debug "saxon -xsl:"$workingdir/injectListing.xsl" -s:$html imgFilnamePattern=$imgFilenamePattern pathToImageDataXML="$imgDataXML" workingdir="$workingdir" listingsXPathExpr="$listingsXPathExpr" $parameters $debugxsl"
+	saxon -xsl:"$workingdir/injectListing.xsl" -s:$html imgFilnamePattern=$imgFilenamePattern pathToImageDataXML="$imgDataXML" workingdir="$workingdir" listingsXPathExpr="$listingsXPathExpr" $parameters $debugxsl
 }
 
 
 toDot() {
 	# transforms the model document to a dot file and renders it as an image
-	# inputfile: the path to the model document
+	# inputfile: the absolute path to the model document
 	# returns the path to the generated image file
 	inputfile=$1
-	dotoutputfile="$inputfile.dot"
+	outputfile=$2
+	if [[ -z "$outputfile" ]];
+	then 
+		dotoutputfile="$workingdir/$inputfile.dot"
+	else 
+		dotoutputfile="$workingdir/$outputfile.dot"
+	fi
 	imgoutputfile="$dotoutputfile.$imgFormat"
 	debug "*** toDot() ***"
 	debug "\$inputfile=$inputfile"
 	debug "\$dotoutputfile=$dotoutputfile"
 	debug "\$imgoutputfile=$imgoutputfile"
-	debug "saxon -xsl:$scriptdir/model2dot.xsl  -s:$inputfile -o:$dotoutputfile -xi:on $parameters"
-
-	if [[ $verbose -eq 1 ]]; 
-	then
-	debugxsl="debug=true"
-	fi
 	debug "saxon -xsl:$scriptdir/model2dot.xsl  -s:$inputfile -o:$dotoutputfile -xi:on $parameters $debugxsl"
-	saxon -xsl:"$scriptdir/model2dot.xsl"  -s:$inputfile -o:"$dotoutputfile" -xi:on $parameters $debugxsl
+	saxon -xsl:"$scriptdir/model2dot.xsl" -s:$inputfile -o:"$dotoutputfile" -xi:on $parameters $debugxsl
 
 	if [ $? -eq 0 ]; then debug "wrote dotfile to $dotoutputfile"; else echo "an error occured transforming xml to dot"; exit $?; fi
 	debug "dot $dotoutputfile -T$imgFormat -o $imgoutputfile" 	
@@ -196,13 +209,12 @@ model2html() {
 	# model: the model document to be processed
 	# pathToModelDot: the path to the overview graph image
 	model=$1
-	pathToModelDot=$2
-	debug "** model2html $model $pathToModelDot **"
-	inputfile=$(basename $model)
+	pathToGraphImage=$2
+	debug "** model2html $model $pathToGraphImage **"
 	html="$workingdir/$inputfile.html"
-	pathToModelDot=$(realpath --relative-to="$workingdir" $pathToModelDot)
-	debug "\$inputfile=$inputfile"
-	saxon -xsl:"$scriptdir/model2html.xsl" -o:$html -xi:on -s:$model pathToModelDot=$pathToModelDot pathToModelDir="$modeldir"
+#	relPathToGraphImage=$(realpath --relative-to="$workingdir" $pathToGraphImage)
+	debug "saxon -xsl:"$scriptdir/model2html.xsl" -o:$html -xi:on -s:$model pathToGraphImage=$pathToGraphImage $parameters $debugxsl"
+	saxon -xsl:"$scriptdir/model2html.xsl" -o:$html -xi:on -s:$model pathToGraphImage="$pathToGraphImage" $parameters $debugxsl
 }
 
 validate() {
@@ -235,7 +247,7 @@ generateTemplates() {
 }
 
 generateDocs() {
-	# inputfile: the model xml document (unexpanded)
+	# inputfile: the model xml document (with unexpanded xincludes)
 	inputfile=$1
 	# outputfile: the filename to write the output to
 	outputfile=$2
@@ -248,7 +260,7 @@ generateDocs() {
 
 	echo "** processing $inputfile **"
 
-	dotfilepath=$(toDot "$inputfile")
+	dotfilepath=$(toDot "$inputfile" "$ouputfile")
 	debug "\$dotfilepath=$dotfilepath"
 	# first we have to expand the xinlucdes in the model file
 	model=`expandModel $inputfile`
@@ -265,35 +277,72 @@ generateDocs() {
 
 	
 	# replace html:code with the highlighted files from the step above
-	debug "saxon -xsl:replaceListingWithHighlightedHtml.xsl -p listingHtmlFilenamePattern="$workingdir/$listingHtmlFilenamePattern" -o:$html $html"
-	saxon -xsl:"$scriptdir/replaceListingWithHighlightedHtml.xsl" -p listingHtmlFilenamePattern="$workingdir/$listingHtmlFilenamePattern" -o:$html $html
+	debug "saxon -xsl:"$scriptdir/replaceListingWithHighlightedHtml.xsl" -o:$html -s:$html listingHtmlFilenamePattern="$workingdir/$listingHtmlFilenamePattern" $parameters $debugxsl"
+	saxon -xsl:"$scriptdir/replaceListingWithHighlightedHtml.xsl" -o:$html -s:$html listingHtmlFilenamePattern="$workingdir/$listingHtmlFilenamePattern" $parameters $debugxsl
 
-	# convert highlighted html code elements to svg or png 
-	imgFormat=$(echo $parameters | grep -oP "(?<=imgFormat=)\w+") || "svg"
+	# since pandoc does not preserve custom CSS formatting when converting to docx
+	# we need to convert the highlighted html code elements to images  
+	# in a standalone html version
+	if [ -z $(echo $parameters | grep -oP "(?<=imgFormat=)\w+") ];
+	then imgFormat="svg"
+	else imgFormat=$(echo $parameters | grep -oP "(?<=imgFormat=)\w+")
+	fi
+
 	toImg $html $imgFormat
 
 	# … and replace the code elements with the resulting images –
-	# unfortunately this is needed because pandoc does not retain the 
-	# CSS styling of the listings.
-	embedImgs $html
-	pandoc -s --toc -f html -i $html -o "$inputfile.docx"
-	echo "successfully wrote $inputfile.docx"
+	htmlStandalone=$(echo $html | sed "s/\.html/standalone.html/g")
+	embedImgs $html | saxon -o:$htmlStandalone -s:- -xsl:"$scriptdir/it.xsl" $parameters 'stripNamespaces=true !include-content-type=no !method=html !version=5.0 !indent=no' 
+
+	
+	
+	# afterwards we can convert to docx via pandoc
+	version=$(xmlstarlet sel -t -v "/model/meta/version" $model)
+	title=$(xmlstarlet sel -t  -v '/model/meta/title' $model)
+	author=$(xmlstarlet sel -t  -v '//person[parent::contributor/@role="author"]/name' $model)
+	debug "\$title=$title"
+	debug "\$version=$version"
+	debug "\$author=$author"
+	docxPath="$workingdir/$outputfile.docx"
+	debug "pandoc -s -f html -i $htmlStandalone -o "$docxPath" -M version="$version" -M title="$title" -M author="$author""
+	pandoc -s -f html -i $htmlStandalone -o "$docxPath" -M version="$version" -M title="$title" -M author="$author"
+	
+	if [ $? -ne 0 ]; 
+	then 
+		echo "an error occured running pandoc $htmlStandalone"; 
+		exit $?; 
+	else
+		debug "successfully wrote $docxPath"
+	fi
 
 	# clean up working directory
-	mv $html $modeldir
+	mv $htmlStandalone "$modeldir/$outputfile.html"
+	mv $docxPath "$modeldir/$outputfile.docx"
+	echo "successfully wrote $modeldir/$outputfile.html + $modeldir/$outputfile.docx"
 	if [[ $keeptmpfiles -ne 1 ]]; then rm -rf "$workingdir"; fi
 	exit 0
 }
 
 debug() {
 	if [[ $verbose -eq 1 ]]; then 
-		echo "$1" >> build.log
+		caller=$(caller)
+		echo $caller | grep -oP '^\d+' | tr '\012\015' '\t' >> $logfile
+		echo "$1" >> $logfile
+#		i=1;
+#		for line in "$1"; do 
+		#	if [ $i -gt 1 ]; then
+		#		echo "\t\t" >> $logfile
+		#	fi
+		#	echo $line >> $logfile
+		#done
 	fi
 }
 
 printHelp() {
 text="
-** quick-and-dirty modeller **
+** quick-and-dirty model to documentation script **
+
+This script transforms a 'model description document' (conforming the schema $schemaFilename) to html and/or docx documentation.
 
 -a: action to run: 
 	* generateDocs: generate full documentation in docx
@@ -317,7 +366,7 @@ exit 1
 }
 
 echo
-while getopts 'a:i:o:p:kv' OPTION
+while getopts 'a:i:o:p:l:kv' OPTION
 do
 case ${OPTION} in 
 	a) ACTION="$OPTARG" ;;
@@ -326,7 +375,7 @@ case ${OPTION} in
 	p) parameters="$OPTARG" ;;
 	k) export keeptmpfiles=1 ;;
 	v) export verbose=1 ;;
-	l) export logfile="$OPTARG" ;;
+	l) logfile="$OPTARG" ;;
 esac
 done
 
@@ -344,15 +393,26 @@ debug "\$scriptdir = $scriptdir"
 export libdir="$scriptdir/lib"
 export PATH="$PATH:$libdir"
 parameters=$parameters 
-imgFormat=$(echo $parameters | grep -oP "(?<=imgFormat=)\w+") || "svg"
-imgFilenamePattern="$listingHtmlFilenamePattern.$imgFormat"
-debug "\$parameters=$parameters"
-debug "\$imgFormat=$imgFormat"
-debug "\$imgFilenamePattern=$imgFilenamePattern"
-if [[ $verbose -eq 1 ]]; then
-	if [[ -z $logfile ]]; then export logfile="build.log"; fi
-	echo "** debug run `date` **" > $logfile
+
+if [ -z $(echo $parameters | grep -oP "(?<=imgFormat=)\w+") ];
+then imgFormat="svg"
+else imgFormat=$(echo $parameters | grep -oP "(?<=imgFormat=)\w+")
 fi
+
+imgFilenamePattern="$listingHtmlFilenamePattern.$imgFormat"
+if [[ $verbose -eq 1 ]]; then
+	if [[ -z $logfile ]]; 
+	then 
+		export logfile='build.log'; 
+	else
+		export logfile=$logfile
+	fi
+	export debugxsl="debug=true"
+	echo "** debug run $(date) **" > $logfile
+fi
+
+debug "\$parameters=$parameters"
+
 
 case $ACTION in
 	generateDocs)
@@ -360,7 +420,9 @@ case $ACTION in
 			echo "missing -i option (input)"
 			exit 1
 		else 
-			outputfile=$outputfile || "$inputfile.docx"
+			if [[ -z $outputfile ]]
+			then  outputfile="$(basename $inputfile .xml)"
+			fi
 			export modeldir=$(dirname `realpath $inputfile`)
 			export workingdir="$modeldir/tmp"
 			mkdir -p $workingdir
