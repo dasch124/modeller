@@ -1,0 +1,897 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar ns="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="http://relaxng.org/ns/structure/1.0"
+  datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+  <start>
+    <choice>
+      <ref name="class"/>
+      <ref name="description"/>
+      <ref name="relations"/>
+      <ref name="vocabularies"/>
+      <ref name="model"/>
+      <ref name="references"/>
+    </choice>
+  </start>
+
+  <define name="ID">
+    <attribute name="ID">
+      <data type="ID"/>
+    </attribute>
+  </define>
+
+  <define name="person">
+    <element name="person">
+      <ref name="ID"/>
+      <ref name="name"/>
+      <optional>
+        <element name="contact">
+          <text/>
+        </element>
+      </optional>
+    </element>
+  </define>
+
+  <define name="meta">
+    <element name="meta">
+      <element name="title">
+        <text/>
+      </element>
+      <oneOrMore>
+        <element name="contributor">
+          <attribute name="role">
+            <data type="NCName"/>
+          </attribute>
+          <ref name="person"/>
+        </element>
+      </oneOrMore>
+      <element name="version">
+        <data type="decimal"/>
+      </element>
+      <element name="changelog">
+        <oneOrMore>
+          <element name="change">
+            <attribute name="status">
+              <choice>
+                <value>draft</value>
+                <value>commenting</value>
+                <value>final</value>
+              </choice>
+            </attribute>
+            <attribute name="when">
+              <data type="date"/>
+            </attribute>
+            <attribute name="who">
+              <data type="IDREF"/>
+            </attribute>
+            <oneOrMore>
+              <choice>
+                <text/>
+                <ref name="p"/>
+              </choice>
+            </oneOrMore>
+          </element>
+        </oneOrMore>
+      </element>
+      <zeroOrMore>
+        <element name="docProp">
+          <attribute name="name"/>
+          <ref name="datatype.textOrMarkup"/>
+        </element>
+      </zeroOrMore>
+      <element name="audience">
+        <text/>
+      </element>
+      <optional>
+        <element name="namespaces">
+          <oneOrMore>
+            <element name="namespace">
+              <attribute name="prefix" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+                <data type="NCName"/>
+              </attribute>
+              <data type="anyURI"></data>
+            </element>
+          </oneOrMore>
+        </element>
+      </optional>
+      <zeroOrMore>
+        <ref name="note"/>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="description">
+    <element name="description">
+      <optional>
+        <ref name="xml.base"/>
+      </optional>
+      <oneOrMore>
+        <choice>
+          <element name="head">
+            <mixed>
+              <optional>
+                <ref name="inlineMarkup"/>
+              </optional>
+            </mixed>
+          </element>
+          <ref name="p"/>
+          <ref name="list"/>
+        </choice>
+      </oneOrMore>
+    </element>
+  </define>
+  <define name="classes">
+    <element name="classes">
+      <oneOrMore>
+        <ref name="class"/>
+      </oneOrMore>
+    </element>
+  </define>
+
+
+
+
+  <define name="relations">
+    <element name="relations">
+      <optional>
+        <ref name="xml.base"/>
+      </optional>
+      <oneOrMore>
+        <ref name="relation"/>
+      </oneOrMore>
+    </element>
+  </define>
+
+  <define name="classType">
+    <attribute name="type">
+      <choice>
+        <value>implicit</value>
+        <value>abstract</value>
+      </choice>
+    </attribute>
+  </define>
+
+  <define name="relation">
+    <element name="relation">
+      <ref name="ID"/>
+      <optional>
+        <ref name="classType"/>
+      </optional>
+      <optional>
+        <attribute name="status">
+          <choice>
+            <value>needs_review</value>
+            <value>candidate</value>
+            <value>approved</value>
+            <value>deprecated</value>
+          </choice>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="parent">
+          <data type="IDREF"/>
+        </attribute>
+      </optional>
+      <element name="sourceClass">
+        <ref name="target"/>
+        <ref name="arity"/>
+      </element>
+      <element name="targetClass">
+        <ref name="target"/>
+        <ref name="arity"/>
+      </element>
+      <ref name="name"/>
+      <element name="reverseName">
+        <text/>
+      </element>
+      <optional>
+        <ref name="definition"/>
+      </optional>
+      <optional>
+        <ref name="note"/>
+      </optional>
+      <optional>
+        <ref name="examples"/>
+      </optional>
+      <optional>
+        <ref name="properties"/>
+      </optional>
+      <zeroOrMore>
+        <ref name="mapping"/>
+      </zeroOrMore>
+    </element>
+  </define>
+
+  <define name="model">
+    <element name="model">
+      <ref name="meta"/>
+      <ref name="description"/>
+      <ref name="classes"/>
+      <optional>
+        <ref name="groups"/>
+      </optional>
+      <ref name="relations"/>
+      <ref name="vocabularies"/>
+      <ref name="datatypes"/>
+      <ref name="references"/>
+    </element>
+  </define>
+
+<define name="references">
+  <element name="references">
+    <oneOrMore>
+      <ref name="reference"/>
+    </oneOrMore>
+  </element>
+</define>
+  
+  <define name="reference">
+      <element name="reference">
+        <ref name="ID"/>
+        <ref name="name"/>
+        <element name="citation">
+          <attribute name="key"/>
+          <oneOrMore>
+            <ref name="datatype.textOrMarkup"/>
+          </oneOrMore>
+        </element>
+        <zeroOrMore>
+          <ref name="anyElement"/>
+        </zeroOrMore>
+      </element>
+  </define>
+
+  <define name="datatypes">
+    <element name="datatypes">
+      <optional>
+        <ref name="xml.base"/>
+      </optional>
+      <oneOrMore>
+        <ref name="datatype"/>
+      </oneOrMore>
+    </element>
+  </define>
+
+  <define name="datatype">
+    <element name="datatype">
+      <ref name="ID"/>
+      <optional>
+        <attribute name="parent">
+          <data type="IDREF"/>
+        </attribute>
+      </optional>
+      <optional>
+        <ref name="classType"/>
+      </optional>
+      <ref name="name"/>
+      <optional>
+        <ref name="note"/>
+      </optional>
+    </element>
+  </define>
+
+  <define name="xml.base">
+    <optional>
+      <attribute name="xml:base">
+        <a:documentation xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0">provides a
+          base URI reference with which applications can resolve relative URI references into
+          absolute URI references.</a:documentation>
+        <data type="anyURI"/>
+      </attribute>
+    </optional>
+  </define>
+
+  <define name="vocabularies">
+    <element name="vocabularies">
+      <ref name="xml.base"/>
+      <oneOrMore>
+        <ref name="vocabulary"/>
+      </oneOrMore>
+    </element>
+  </define>
+  <define name="vocabulary">
+    <zeroOrMore>
+      <ref name="vocab"/>
+    </zeroOrMore>
+  </define>
+  <define name="vocab">
+    <element name="vocab">
+      <attribute name="ID">
+        <data type="ID"/>
+      </attribute>
+      <ref name="name"/>
+      <optional>
+        <element name="values">
+          <choice>
+            <ref name="p"/>
+            <ref name="list"/>
+          </choice>
+        </element>
+      </optional>
+      <optional>
+        <ref name="note"/>
+      </optional>
+    </element>
+  </define>
+  <define name="name">
+    <element name="name">
+      <text/>
+    </element>
+  </define>
+  <define name="ref">
+    <element name="ref">
+      <choice>
+        <attribute name="target">
+          <choice>
+            <data type="IDREF"/>
+          </choice>
+        </attribute>
+        <ref name="uriAtt"/>
+      </choice>
+      <optional>
+        <attribute name="targetType">
+          <data type="NCName"/>
+        </attribute>
+      </optional>
+      <text/>
+    </element>
+  </define>
+
+  <define name="uriAtt">
+    <attribute name="uri">
+      <choice>
+        <data type="anyURI"/>
+      </choice>
+    </attribute>
+  </define>
+
+<define name="CHECKME">
+  <element name="CHECKME">
+    <ref name="datatype.internalNoteContent"/>
+  </element>
+</define>
+<define name="TODO">
+  <element name="TODO">
+    <ref name="datatype.internalNoteContent"/>
+  </element>
+</define>
+
+  <define name="inlineMarkup">
+    <choice>
+      <ref name="note"/>
+      <ref name="ref"/>
+      <element name="b">
+        <mixed>
+          <zeroOrMore>
+            <ref name="inlineMarkup"/>
+          </zeroOrMore>
+        </mixed>
+      </element>
+      <element name="i">
+        <mixed>
+          <zeroOrMore>
+            <ref name="inlineMarkup"/>
+          </zeroOrMore>
+        </mixed>
+      </element>
+      <ref name="entityReferences"/>
+    </choice>
+  </define>
+
+  <define name="p">
+    <element name="p">
+      <mixed>
+        <zeroOrMore>
+          <choice>
+            <ref name="list"/>
+            <ref name="inlineMarkup"/>
+          </choice>
+        </zeroOrMore>
+      </mixed>
+    </element>
+  </define>
+  <define name="list">
+    <element name="list">
+      <optional>
+        <attribute name="type">
+          <data type="NCName"/>
+        </attribute>
+      </optional>
+      <zeroOrMore>
+        <element name="item">
+          <ref name="datatype.textOrMarkup"/>
+        </element>
+        <optional>
+          <ref name="description"/>
+        </optional>
+      </zeroOrMore>
+    </element>
+  </define>
+
+  <define name="groups">
+    <element name="groups">
+      <oneOrMore>
+        <ref name="group"/>
+      </oneOrMore>
+    </element>
+  </define>
+  <define name="group">
+    <element name="group">
+      <ref name="ID"/>
+      <ref name="name"/>
+      <optional>
+        <ref name="description"/>
+      </optional>
+      <optional>
+        <ref name="note"/>
+      </optional>
+      <oneOrMore>
+        <ref name="className"/>
+      </oneOrMore>
+    </element>
+  </define>
+
+  <define name="class">
+    <element name="class">
+      <ref name="xml.base"/>
+      <ref name="ID"/>
+      <optional>
+        <attribute name="parent">
+          <data type="IDREFS"/>
+        </attribute>
+      </optional>
+      <optional>
+        <ref name="classType"/>
+      </optional>
+      <ref name="name"/>
+      <ref name="definition"/>
+      <zeroOrMore><ref name="note"/></zeroOrMore>
+      <optional>
+        <ref name="examples"></ref>
+      </optional>
+      <optional>
+        <ref name="properties"/>
+      </optional>
+      <zeroOrMore>
+        <ref name="mapping"/>
+      </zeroOrMore>
+      
+    </element>
+  </define>
+  
+  <define name="definition">
+    <element name="definition">
+      <ref name="datatype.textOrMarkup"/>
+    </element>
+  </define>
+  
+  <define name="instanceName">
+    <element name="instanceName">
+      <optional>
+          <attribute name="classRef">
+            <data type="IDREF"/>
+          </attribute>
+      </optional>
+      <ref name="entityNameContent"/>
+    </element>
+  </define>
+  
+  <define name="examples">
+    <element name="examples">
+      <oneOrMore>
+        <element name="example">
+          <ref name="datatype.textOrMarkup"/>
+          <optional>
+            <element name="source">
+              <text/>
+            </element>
+          </optional>
+        </element>
+      </oneOrMore>
+    </element>
+  </define>
+
+
+  <define name="arity">
+    <element name="arity">
+      <ref name="arityDatatype"/>
+    </element>
+  </define>
+
+  <define name="arityDatatype">
+    <data type="string">
+      <param name="pattern">(n|[0-9]+(-([0-9]+|n))?)</param>
+    </data>
+  </define>
+
+
+  <define name="datatype.textOrMarkup">
+    <choice>
+      <oneOrMore>
+        <zeroOrMore>
+          <ref name="p"/>
+        </zeroOrMore>
+        <zeroOrMore>
+          <ref name="list"/>
+        </zeroOrMore>
+        <zeroOrMore>
+          <choice>
+            <mixed>
+              <optional>
+                <zeroOrMore>
+                  <ref name="list"/>
+                </zeroOrMore>
+                <zeroOrMore>
+                  <ref name="inlineMarkup"/>
+                </zeroOrMore>
+              </optional>
+            </mixed>
+          </choice>
+        </zeroOrMore>
+      </oneOrMore>
+    </choice>
+  </define>
+
+  <define name="note">
+    <oneOrMore>
+      <choice>
+        <element name="note">
+          <ref name="datatype.textOrMarkup"/>
+        </element>
+        <ref name="CHECKME"/>
+        <ref name="TODO"/>
+      </choice>
+    </oneOrMore>
+  </define>
+  
+  <define name="datatype.internalNoteContent">
+    <attribute name="who">
+      <data type="IDREF"/>
+    </attribute>
+    <attribute name="when">
+      <data type="date"/>
+    </attribute>
+    <attribute name="status">
+      <choice>
+        <value>new</value>
+        <value>pending</value>
+        <value>resolved</value>
+      </choice>
+    </attribute>
+    <ref name="datatype.textOrMarkup"/>
+  </define>
+
+<define name="internalStructure">
+  <element name="internalStructure">
+    <attribute name="type">
+      <choice>
+        <value>regex</value>
+        <value>XPath expression</value>
+        <value>annotations</value>
+        <value>other</value>
+      </choice>
+    </attribute>
+    <choice>
+      <ref name="p"/>
+      <ref name="code"/>
+      <ref name="properties"/>
+    </choice>
+  </element>
+</define>
+
+  <define name="property">
+    <element name="property">
+      <ref name="ID"/>
+      <element name="arity">
+        <ref name="arityDatatype"/>
+      </element>
+      <ref name="name"/>
+      <ref name="datatypeName"/>
+      <optional><ref name="internalStructure"/></optional>
+      <optional>
+        <ref name="note"/>
+      </optional>
+      <optional>
+        <ref name="examples"/>
+      </optional>
+      <zeroOrMore>
+        <ref name="mapping"/>
+      </zeroOrMore>
+    </element>
+  </define>
+
+  <define name="datatypeName">
+    <element name="datatypeName">
+      <attribute name="target">
+        <data type="IDREF"/>
+      </attribute>
+      <optional>
+        <attribute name="vocabRef">
+          <data type="IDREF"/>
+        </attribute>
+      </optional>
+      <optional>
+        <ref name="datatypeName"/>
+      </optional>
+      <empty/>
+    </element>
+  </define>
+
+  <define name="properties">
+    <element name="properties">
+      <zeroOrMore>
+        <ref name="property"/>
+      </zeroOrMore>
+      <optional>
+        <ref name="note"/>
+      </optional>
+    </element>
+  </define>
+
+  <define name="mapping">
+    <element name="mapping">
+      <optional>
+        <attribute name="level">
+          <choice>
+            <value>exactMatch</value>
+            <documentation xmlns="http://relaxng.org/ns/compatibility/annotations/1.0">The mapping
+              target has exactly the same semantics as the source and thus fully exchangeable with
+              the mapped source.</documentation>
+            <value>closeMatch</value>
+            <documentation xmlns="http://relaxng.org/ns/compatibility/annotations/1.0">The mapping
+              target has comparable yet not exactly the same semantics as the source. Next to
+              subsummising other kinds of relations, "closeMatch" can be seen as a generalized
+              version of "broader" or "narrower".</documentation>
+            <value>broader</value>
+            <documentation xmlns="http://relaxng.org/ns/compatibility/annotations/1.0">The mapping
+              source is more broadly defined that the mapping target. It might be considered a
+              superclass of the mapping target (but does not have to).</documentation>
+            <value>narrower</value>
+            <documentation xmlns="http://relaxng.org/ns/compatibility/annotations/1.0">The mapping
+              source is more specific than the mapping target, thus it might be considered a
+              subclass of the mapping target (but does not have to).</documentation>
+          </choice>
+        </attribute>
+      </optional>
+      <ref name="targetLanguage"/>
+      <optional>
+        <attribute name="version"/>
+      </optional>
+      <choice>
+        <zeroOrMore>
+          <ref name="entityReferences"/>
+        </zeroOrMore>
+      </choice>
+      <zeroOrMore>
+        <ref name="note"/>
+      </zeroOrMore>
+      <zeroOrMore>
+        <ref name="code"/>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="code">
+    <element name="code">
+      <optional>
+        <attribute name="language">
+          <choice>
+            <value>xml</value>
+            <value>turtle</value>
+          </choice>
+        </attribute>
+      </optional>
+      <choice>
+        <text/>
+        <ref name="anyElement"/>
+      </choice>
+    </element>
+  </define>
+  <define name="anyElement">
+    <element>
+      <anyName/>
+      <zeroOrMore>
+        <attribute>
+          <anyName>
+            <except>
+              <name>target</name>
+              <name>targetLanguage</name>
+              <name>classRef</name>
+              <name>ID</name>
+              <name>vocabRef</name>
+              <name>parent</name>
+              <name>who</name>
+            </except>
+          </anyName>
+        </attribute>
+      </zeroOrMore>
+      <zeroOrMore>
+        <ref name="anyElement"/>
+      </zeroOrMore>
+      <zeroOrMore>
+        <text/>
+      </zeroOrMore>
+    </element>
+  </define>
+
+
+  <define name="targetLanguage">
+    <attribute name="targetLanguage">
+      <data type="IDREF"/>
+    </attribute>
+  </define>
+  
+
+  <define name="annotationRef">
+    <element name="annotationRef">
+      <ref name="entityNameContent"/>
+    </element>
+  </define>
+  
+
+  <define name="relName">
+    <element name="relName">
+      <ref name="entityNameContent"/>
+    </element>
+  </define>
+
+  
+  
+  <define name="className">
+    <element name="className">
+      <ref name="entityNameContent"/>
+    </element>
+  </define>
+
+
+  <define name="tag">
+    <element name="tag">
+      <documentation xmlns="http://relaxng.org/ns/compatibility/annotations/1.0">See https://www.tei-c.org/release/doc/tei-p5-doc/en/html/ref-tag.html</documentation>
+      <ref name="entityNameContent"/>
+    </element>
+  </define>
+  
+
+  <define name="propName">
+    <!-- property names might be short/ambiguous project-wide, 
+      so we require @target on those DS 2022-04-26-->
+    <element name="propName">
+      <optional><ref name="target"/></optional>
+      <text/>
+    </element>
+  </define>
+
+  <define name="vocabName">
+    <element name="vocabName">
+      <ref name="target"/>
+      <text/>
+    </element>
+  </define>
+
+
+  <define name="target">
+    <attribute name="target">
+      <data type="IDREF"/>
+    </attribute>
+  </define>
+
+  <define name="entityNameContent">
+    <optional>
+      <choice>
+        <ref name="target"/>
+        <ref name="uriAtt"/>
+      </choice>
+    </optional>
+    <text/>
+  </define>
+
+
+  <define name="entityReferences">
+    <choice>
+      <ref name="className"/>
+      <ref name="instanceName"/>
+      <ref name="relName"/>
+      <ref name="propName"/>
+      <ref name="vocabName"/>
+      <ref name="datatypeName"/>
+      <ref name="tag"/>
+      <ref name="path"/>
+    </choice>
+  </define>
+  
+  <define name="path">
+    <element name="path">
+      <mixed>
+        <zeroOrMore>
+          <ref name="entityReferences"/>
+        </zeroOrMore>
+      </mixed>
+    </element>
+  </define>
+  <define name="annotation">
+    <element name="annotation">
+      <attribute name="type">
+        <choice>
+          <value>label</value>
+          <value>relation</value>
+        </choice>
+      </attribute>
+      <optional>
+        <choice>
+          <ref name="relName"/>
+          <ref name="vocabName"/>
+          <ref name="className"/>
+        </choice>
+      </optional>
+    </element>
+  </define>
+
+  <define name="include">
+    <element name="include" ns="http://www.w3.org/2001/XInclude">
+      <a:documentation xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0">The W3C
+        XInclude element</a:documentation>
+      <optional>
+        <ref name="fallback"/>
+      </optional>
+      <optional>
+        <attribute name="href">
+          <a:documentation xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0">pointer to
+            the resource being included</a:documentation>
+          <data type="anyURI"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0" name="parse"
+          a:defaultValue="xml">
+          <a:documentation/>
+          <choice>
+            <value>xml</value>
+            <a:documentation/>
+            <value>text</value>
+            <a:documentation/>
+          </choice>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="xpointer">
+          <a:documentation xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0"/>
+          <data type="string"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="encoding">
+          <a:documentation xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0"/>
+          <data type="string"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="accept">
+          <a:documentation xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0"/>
+          <data type="string"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="accept-charset">
+          <a:documentation xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0"/>
+          <data type="string"/>
+        </attribute>
+      </optional>
+      <optional>
+        <attribute name="accept-language">
+          <a:documentation xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0"/>
+          <data type="string"/>
+        </attribute>
+      </optional>
+      <empty/>
+    </element>
+  </define>
+
+  <define name="fallback">
+    <element name="fallback" ns="http://www.w3.org/2001/XInclude">
+      <a:documentation xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0">Wrapper for
+        fallback elements if an XInclude fails</a:documentation>
+      <oneOrMore>
+        <choice>
+          <text/>
+        </choice>
+      </oneOrMore>
+    </element>
+  </define>
+</grammar>

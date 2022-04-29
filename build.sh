@@ -457,7 +457,7 @@ case $ACTION in
 	;;
 
 	setup)
-		sudo dnf install pandoc graphviz libxml2 xmlstarlet python3-pygments wkhtmltopdf wget unzip
+		sudo dnf -y install pandoc graphviz libxml2 xmlstarlet python3-pygments wkhtmltopdf wget unzip
 		setup 
 		
 	;;
