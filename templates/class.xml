@@ -4,32 +4,8 @@
     <name></name>
     <definition>
         <p></p>
-        <list>
-            <item>
-                <p></p>
-            </item>
-        </list>
-        <list>
-            <item>
-                <p></p>
-            </item>
-        </list>
     </definition>
     <examples>
-        <example>
-            <p></p>
-            <list>
-                <item>
-                    <p></p>
-                </item>
-            </list>
-            <list>
-                <item>
-                    <p></p>
-                </item>
-            </list>
-            <source></source>
-        </example>
     </examples>
     <properties>
         <property ID="">
@@ -38,64 +14,14 @@
             <datatypeRef target=""></datatypeRef>
             <note>
                 <p></p>
-                <list>
-                    <item>
-                        <p></p>
-                    </item>
-                </list>
-                <list>
-                    <item>
-                        <p></p>
-                    </item>
-                </list>
             </note>
-            <mapping targetLanguage="">
-                <p></p>
-                <note>
-                    <p></p>
-                    <list>
-                        <item>
-                            <p></p>
-                        </item>
-                    </list>
-                    <list>
-                        <item>
-                            <p></p>
-                        </item>
-                    </list>
-                </note>
-                <code></code>
-            </mapping>
         </property>
     </properties>
     <mapping targetLanguage="">
         <p></p>
-        <note>
-            <p></p>
-            <list>
-                <item>
-                    <p></p>
-                </item>
-            </list>
-            <list>
-                <item>
-                    <p></p>
-                </item>
-            </list>
-        </note>
         <code></code>
     </mapping>
     <note>
         <p></p>
-        <list>
-            <item>
-                <p></p>
-            </item>
-        </list>
-        <list>
-            <item>
-                <p></p>
-            </item>
-        </list>
     </note>
 </class>

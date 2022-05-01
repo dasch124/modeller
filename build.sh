@@ -237,7 +237,8 @@ generateTemplates() {
 	outputdir=$1
 	echo "** writing templates to $outputdir **"
 	pushd "$scriptdir"
-	pathToSchema=$(realpath "$schemaFilename")
+	#pathToSchema=$(realpath "$schemaFilename")
+	pathToSchema="https://raw.githubusercontent.com/dasch124/modeller/main/model.rng"
 	cp "./templates/model.xml" "$outputdir/."
 	cp "./templates/class.xml" "$outputdir/."
 	sed -i "s|\$pathToSchema|$pathToSchema|" "$outputdir/model.xml"
