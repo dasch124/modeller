@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <grammar ns="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns="http://relaxng.org/ns/structure/1.0"
-  datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+  datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes"
+  xmlns:sch="http://purl.oclc.org/dsdl/schematron">
   <start>
     <choice>
       <ref name="class"/>
@@ -60,8 +61,19 @@
             <attribute name="when">
               <data type="date"/>
             </attribute>
+            <sch:pattern>
+              <sch:rule context="@who">
+                <sch:assert test="exists(root()//person[@ID = current()])">person element with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
+              </sch:rule>
+            </sch:pattern>
             <attribute name="who">
-              <data type="IDREF"/>
+              <data type="IDREF">
+                <sch:pattern>
+                  <sch:rule context="@who">
+                    <sch:assert test="exists(root()//person[@ID = current()])">reference element with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
+                  </sch:rule>
+                </sch:pattern>
+              </data>
             </attribute>
             <oneOrMore>
               <choice>
@@ -134,9 +146,9 @@
       <optional>
         <ref name="xml.base"/>
       </optional>
-      <oneOrMore>
+      <zeroOrMore>
         <ref name="relation"/>
-      </oneOrMore>
+      </zeroOrMore>
     </element>
   </define>
 
@@ -159,6 +171,7 @@
         <attribute name="status">
           <choice>
             <value>needs_review</value>
+            <value>under_review</value>
             <value>candidate</value>
             <value>approved</value>
             <value>deprecated</value>
@@ -167,15 +180,33 @@
       </optional>
       <optional>
         <attribute name="parent">
-          <data type="IDREF"/>
+          <data type="IDREF">
+            <sch:pattern>
+              <sch:rule context="relation/@parent">
+                <sch:assert test="exists(root()//relation[@ID = current()])">relation element with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
+              </sch:rule>
+            </sch:pattern>
+          </data>
         </attribute>
       </optional>
       <element name="sourceClass">
-        <ref name="target"/>
+        <attribute name="target">
+          <data type="IDREFS">
+            <sch:rule context="sourceClass/@target">
+              <sch:assert test="for i in tokenize . return exists(root()//class[@ID = $i])">class with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
+            </sch:rule>
+          </data>
+        </attribute>
         <ref name="arity"/>
       </element>
       <element name="targetClass">
-        <ref name="target"/>
+        <attribute name="target">
+          <data type="IDREFS">
+            <sch:rule context="targetClass/@target">
+              <sch:assert test="for i in tokenize . return exists(root()//class[@ID = $i])">class with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
+            </sch:rule>
+          </data>
+        </attribute>
         <ref name="arity"/>
       </element>
       <ref name="name"/>
@@ -255,7 +286,13 @@
       <ref name="ID"/>
       <optional>
         <attribute name="parent">
-          <data type="IDREF"/>
+          <data type="IDREF">
+            <sch:pattern>
+              <sch:rule context="datatype/@parent">
+                <sch:assert test="exists(root()//datatype[@ID = current()])">datatype element with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
+              </sch:rule>
+            </sch:pattern>
+          </data>
         </attribute>
       </optional>
       <optional>
@@ -435,7 +472,11 @@
       <ref name="ID"/>
       <optional>
         <attribute name="parent">
-          <data type="IDREFS"/>
+          <data type="IDREFS">
+            <sch:rule context="class/@parent">
+              <sch:assert test="for i in tokenize . return exists(root()//class[@ID = $i])">class with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
+            </sch:rule>
+          </data>
         </attribute>
       </optional>
       <optional>
@@ -449,6 +490,9 @@
       </optional>
       <optional>
         <ref name="properties"/>
+      </optional>
+      <optional>
+        <ref name="relations"/>
       </optional>
       <zeroOrMore>
         <ref name="mapping"/>
@@ -467,7 +511,13 @@
     <element name="instanceName">
       <optional>
           <attribute name="classRef">
-            <data type="IDREF"/>
+            <data type="IDREF">
+              <sch:pattern>
+                <sch:rule context="instanceName/@classRef">
+                  <sch:assert test="exists(root()//class[@ID = current()])">class with ID "<sch:value-of select="@classRef"/>" not found.</sch:assert>
+                </sch:rule>
+              </sch:pattern>
+            </data>
           </attribute>
       </optional>
       <ref name="entityNameContent"/>
@@ -544,7 +594,13 @@
   
   <define name="datatype.internalNoteContent">
     <attribute name="who">
-      <data type="IDREF"/>
+      <data type="IDREF">
+        <sch:pattern>
+          <sch:rule context="@who">
+            <sch:assert test="exists(root()//person[@ID = current()])">reference element with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
+          </sch:rule>
+        </sch:pattern>
+      </data>
     </attribute>
     <attribute name="when">
       <data type="date"/>
@@ -601,11 +657,21 @@
   <define name="datatypeName">
     <element name="datatypeName">
       <attribute name="target">
-        <data type="IDREF"/>
+        <data type="IDREF">
+          <sch:pattern>
+            <sch:rule context="datatypeName/@target">
+              <sch:assert test="exists(root()//datatype[@ID = current()])">datatype with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
+            </sch:rule>
+          </sch:pattern>
+        </data>
       </attribute>
       <optional>
         <attribute name="vocabRef">
-          <data type="IDREF"/>
+          <data type="IDREF">
+            <sch:rule context="datatypeName/@vocabRef">
+              <sch:assert test="exists(root()//vocab[@ID = current()])">vocabulary with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
+            </sch:rule>
+          </data>
         </attribute>
       </optional>
       <optional>
@@ -714,7 +780,13 @@
 
   <define name="targetLanguage">
     <attribute name="targetLanguage">
-      <data type="IDREF"/>
+      <data type="IDREF">
+        <sch:pattern>
+          <sch:rule context="@targetLanguage">
+            <sch:assert test="exists(root()//reference[@ID = current()])">reference element with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
+          </sch:rule>
+        </sch:pattern>
+      </data>
     </attribute>
   </define>
   
@@ -727,14 +799,27 @@
   
 
   <define name="relName">
+    <sch:rule context="relName">
+      <sch:assert test="exists(root()//relation[@ID = current()])">relation element with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
+    </sch:rule>
     <element name="relName">
+      <optional>
+        <attribute name="direction">
+          <choice>
+            <value>forward</value>
+            <value>inverse</value>
+          </choice>
+        </attribute>
+      </optional>
       <ref name="entityNameContent"/>
     </element>
   </define>
 
   
-  
   <define name="className">
+    <sch:rule context="className">
+      <sch:assert test="exists(root()//class[@ID = current()])">class element with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
+    </sch:rule>
     <element name="className">
       <ref name="entityNameContent"/>
     </element>
@@ -753,7 +838,7 @@
     <!-- property names might be short/ambiguous project-wide, 
       so we require @target on those DS 2022-04-26-->
     <element name="propName">
-      <optional><ref name="target"/></optional>
+      <ref name="target"/>
       <text/>
     </element>
   </define>

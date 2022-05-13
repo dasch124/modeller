@@ -14,6 +14,7 @@
     <xsl:param name="ranksep">1</xsl:param>
     <xsl:param name="labeldistance">1.0</xsl:param>
     <xsl:param name="labelfloat">false</xsl:param>
+    <xsl:variable name="doc" select="root()" as="document-node()"/>
     <xsl:variable name="subclassStyle">
         <xsl:text>style = dotted&#10;color = gray&#10;fontcolor = gray</xsl:text>
     </xsl:variable>
@@ -32,7 +33,14 @@
             label = "<xsl:value-of select="model/meta/title"/>"
         
             <xsl:apply-templates select="//class"/>
-            <xsl:apply-templates select="//relations"/>
+            <xsl:choose>
+                <xsl:when test="$showCardinalities = 'true'">
+                    <xsl:call-template name="relations-showCardinalities"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:call-template name="relations-hideCardinalities"/>
+                </xsl:otherwise>
+            </xsl:choose>
         
             <xsl:apply-templates select="//group"/>
         
@@ -167,36 +175,49 @@
     
     </xsl:template>
     
-    <xsl:template match="relations[$showCardinalities = 'false']">
-        <xsl:for-each-group select="relation" group-by="concat(sourceClass/@target,'_',targetClass/@target,'_',@type)">
-            <xsl:variable name="sourceClassDef" select="root()//class[@ID = current-group()[1]/sourceClass/@target]" as="element(class)"/>
-            <xsl:variable name="sourceClassID" select="if ($showAbstractSuperclasses = 'false' and $sourceClassDef/@type = 'abstract') then root(.)//class[@parent = $sourceClassDef/@ID]/@ID else $sourceClassDef/@ID" as="attribute(ID)+"/>
-            
-            <xsl:variable name="targetClassDef" select="root()//*[@ID = current-group()[1]/targetClass/@target]" as="element(class)"/>
-            <xsl:variable name="targetClassID" select="if ($showAbstractSuperclasses = 'false' and $targetClassDef/@type = 'abstract') then root(.)//class[@parent = $targetClassDef/@ID]/@ID else $targetClassDef/@ID" as="attribute(ID)+"/>
-            
-            <xsl:variable name="relations" select="current-group()" as="element(relation)+"/>
-            
-            <xsl:for-each select="distinct-values($sourceClassID)">
-                <xsl:variable name="s" select="."/>
-                <xsl:for-each select="distinct-values($targetClassID)">
-                    <xsl:variable name="t" select="."/>
-                    <xsl:value-of select="$s"/> -> <xsl:value-of select="$t"/> [
+    
+    <xsl:template name="relations-showCardinalities"/>
+    
+    <xsl:template name="relations-hideCardinalities">
+        <xsl:variable name="allRelations" select="root()//relation" as="element(relation)+"/>
+        <xsl:variable name="sourceClasses" select="distinct-values($allRelations/sourceClass/@target/tokenize(.,' '))" as="xs:string*"/>
+        <xsl:variable name="targetClasses" select="distinct-values($allRelations/targetClass/@target/tokenize(.,' '))" as="xs:string*"/>
+        <xsl:variable name="types" select="distinct-values($allRelations/@type)"/>
+        <xsl:for-each select="$sourceClasses">
+            <xsl:variable name="sourceClass" select="."/>
+            <xsl:for-each select="$targetClasses">
+                <xsl:variable name="targetClass" select="."/>
+                <xsl:for-each select="($types,'')">
+                    <xsl:variable name="type" select="."/>
+                    <xsl:variable name="relations" select="$allRelations[sourceClass/@target = $sourceClass][targetClass/@target = $targetClass][if ($type!='') then @type = $type else true()]" as="element(relation)*"/>
+                    <xsl:if test="exists($relations)">
+                        <xsl:variable name="sourceClassDef" select="$doc//class[@ID = $sourceClass]" as="element(class)"/>
+                        <xsl:variable name="sourceClassID" select="if ($showAbstractSuperclasses = 'false' and $sourceClassDef/@type = 'abstract') then $doc//class[@parent = $sourceClassDef/@ID]/@ID else $sourceClassDef/@ID" as="attribute(ID)+"/>
+                        <xsl:variable name="targetClassDef" select="$doc//*[@ID = $targetClass]" as="element(class)"/>
+                        <xsl:variable name="targetClassID" select="if ($showAbstractSuperclasses = 'false' and $targetClassDef/@type = 'abstract') then $doc//class[@parent = $targetClassDef/@ID]/@ID else $targetClassDef/@ID" as="attribute(ID)+"/>
                         
-                        <xsl:text>label = "</xsl:text><xsl:value-of select="string-join(current-group()/name,'&#10;')"/><xsl:text>"</xsl:text><!--<xsl:for-each select="$relations">
+                        <xsl:variable name="s" select="$sourceClassID"/>
+                        <xsl:variable name="t" select="$targetClassID"/>
+                        
+                        
+                        <xsl:value-of select="$s"/> -> <xsl:value-of select="$t"/> [
+                        
+                        <xsl:text>label = "</xsl:text><xsl:value-of select="string-join($relations/name,'&#10;')"/><xsl:text>"</xsl:text><!--<xsl:for-each select="$relations">
 <!-\-                            <xsl:text disable-output-escaping="yes">&lt;a href="#</xsl:text><xsl:value-of select="@ID"/><xsl:text disable-output-escaping="yes">"&gt;</xsl:text><xsl:value-of select="name"/><xsl:text disable-output-escaping="yes">&lt;/a&gt;&lt;br/&gt;</xsl:text>-\->
                             <xsl:value-of select="name"/><xsl:text>&lt;BR/&gt;</xsl:text>
                         </xsl:for-each>-->
                         labelfloat = <xsl:value-of select="$labelfloat"/>
-                        URL = "<xsl:value-of select="concat('#',current-group()[1]/@ID)"/>"
-                        <xsl:if test="$relations/@type = 'implicit'">
+                        URL = "<xsl:value-of select="concat('#',$relations[1]/@ID)"/>"
+                        <xsl:if test="$type = 'implicit'">
                             style=dashed
                             color = gray
                             fontcolor = gray
                         </xsl:if>
                         ]
+                        
+                    </xsl:if>
                 </xsl:for-each>
             </xsl:for-each>
-        </xsl:for-each-group>
+        </xsl:for-each>
     </xsl:template>
 </xsl:stylesheet>

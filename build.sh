@@ -49,8 +49,8 @@ expandModel() {
 	# model=path to the model document
 	model=$1
 	output="$workingdir/modelFull.xml"
-	debug "saxon -s:$model -xsl:"$scriptdir/it.xsl" -o:"$output" -xi:on"
-	saxon -s:$model -xsl:"$scriptdir/it.xsl" -o:"$output" -xi:on
+	debug "saxon -s:$model -xsl:"$scriptdir/expand.xsl" -o:"$output" -xi:on"
+	saxon -s:$model -xsl:"$scriptdir/expand.xsl" -o:"$output" -xi:on
 	echo $output
 }	
 
@@ -238,11 +238,12 @@ generateTemplates() {
 	echo "** writing templates to $outputdir **"
 	pushd "$scriptdir"
 	#pathToSchema=$(realpath "$schemaFilename")
-	pathToSchema="https://raw.githubusercontent.com/dasch124/modeller/main/model.rng"
+	cp "$schemaFilename" "$outputdir/."
 	cp "./templates/model.xml" "$outputdir/."
 	cp "./templates/class.xml" "$outputdir/."
-	sed -i "s|\$pathToSchema|$pathToSchema|" "$outputdir/model.xml"
-	sed -i "s|\$pathToSchema|$pathToSchema|" "$outputdir/class.xml"
+	for f in "$outputdir/*.xml"; do
+		sed -i "s|\$pathToSchema|$pathToSchema|" "$outputdir/$f"
+	done
 	popd
 	exit 0
 }
