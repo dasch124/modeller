@@ -262,6 +262,7 @@ generateDocs() {
 
 	echo "** processing $inputfile **"
 
+	# TODO generate dot from expanded inputfile! DS 2022-05-17
 	dotfilepath=$(toDot "$inputfile" "$ouputfile")
 	debug "\$dotfilepath=$dotfilepath"
 	# first we have to expand the xinlucdes in the model file
@@ -320,6 +321,7 @@ generateDocs() {
 	# clean up working directory
 	mv $htmlStandalone "$modeldir/$outputfile.html"
 	mv $docxPath "$modeldir/$outputfile.docx"
+	mv $dotfilepath "$modeldir/$outputfile.$imgFormat"
 	echo "successfully wrote $modeldir/$outputfile.html + $modeldir/$outputfile.docx"
 	if [[ $keeptmpfiles -ne 1 ]]; then rm -rf "$workingdir"; fi
 	exit 0
