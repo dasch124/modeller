@@ -1,10 +1,29 @@
 # Modeller
  
-This repo contains a XML schema + conversion scripts for quickly formulating a structured data model in a format-agnostic manner and transform it into human-readable documentation as html and/or docx.
+This repo contains a XML schema + quick and dirty conversion script for formulating a semi-structured data model in a format-agnostic manner with embedded documentation, and transform it into human-readable documentation as html and/or docx.
+
+## Depenendcies
+
+As said the script is quick and dirty, as such it comes with a host of dependencies
+
+* graphviz
+* Saxon HE <https://www.saxonica.com/download/java.xml>
+* java 
+* pandoc 
+* graphviz 
+* libxml2 
+* xmlstarlet 
+* python3-pygments 
+* wkhtmltopdf 
+* wget 
+* unzip
+* https://github.com/atextor/owl-cli/releases/download/snapshot/owl-x86_64-linux-snapshot
+
+If the approach / underlying schema proves useful, this should be replaced by some neat python script … 
 
 ## Setup
 
-Run … 
+If you use Fedora, you can try your luck with simply running
 
 ```
 > build.sh -a install
@@ -43,7 +62,17 @@ WORKDIR /tmp
 
 COPY ./*.xml .
 
-RUN modeller/build.sh -a generateDocs -i model.xml -o index -v -l debug.log
+RUN modeller/build.sh -a generateDocs -i model.xml -o index -v -l debug.log -p imgFormat=svg
+RUN sh
+```
+
+Afterwards run
+
+```
+> podman image build . --tag my-model
+> sudo podman cp my-model:index.html ./index.html
+> sudo podman cp my-model:index.docx ./index.docx
+> sudo podman cp my-model:index.svg ./index.svg
 ```
 
 
@@ -53,7 +82,7 @@ Note to self:
 
 ```
 > podman build . --tag ghcr.io/dasch124/modeller:v1_beta --no-cache
-> podman login ghcr.io --username dasch124 --password-stdin < echo $GHCR_TOKEN
+> echo $GHCR_TOKEN | podman login ghcr.io --username dasch124 --password-stdin
 > podman push ghcr.io/dasch124/modeller:v1_beta
        
 ```
