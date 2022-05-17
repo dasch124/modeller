@@ -816,7 +816,7 @@
    <xsl:template name="formatName">
        <xsl:param name="entityType" as="xs:string?"/>
        <xsl:variable name="name" select="."/>
-       <xsl:variable name="isExternal" select="matches(.,concat('^(',string-join($doc//namespaces/namespace/@prefix/concat(.,':'),'|'),')'))"/>
+       <xsl:variable name="isExternal" select="if (exists($doc/namespace)) then matches(.,concat('^(',string-join($doc//namespaces/namespace/@prefix/concat(.,':'),'|'),')')) else false()"/>
        <xsl:choose>
            <xsl:when test="$isExternal">
                <code><xsl:apply-templates/></code>
