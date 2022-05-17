@@ -242,7 +242,9 @@
       <ref name="relations"/>
       <ref name="vocabularies"/>
       <ref name="datatypes"/>
-      <ref name="references"/>
+      <optional>
+        <ref name="references"/>
+      </optional>
     </element>
   </define>
 
