@@ -219,9 +219,8 @@ model2html() {
 
 validate() {
 	file=$1	
-	pathToSchema=$(xmlstarlet sel -t  -v '//processing-instruction("xml-model")' $file | grep --only-matching -P '(?<=href=").+?(?=")')
+	pathToSchema=$2
 	debug "*** validate() ***"
-	[ -z "$pathToSchema" ]  && pathToSchema=$(realpath $scriptdir/$schemaFilename)
 
 	if [ ! -f "$pathToSchema" ]
 	then
@@ -258,7 +257,7 @@ generateDocs() {
 	# check for presence of $inputfile
 	if [ ! -f "$inputfile" ]; then	echo "file not found '$inputfile'";  exit 1; fi 
 
-	validate $inputfile
+	validate $inputfile $pathToSchema
 
 	echo "** processing $inputfile **"
 
@@ -319,7 +318,7 @@ generateDocs() {
 	fi
 
 	# clean up working directory
-	mv $htmlStandalone "$modeldir/$outputfile.html"
+	mv $html "$modeldir/$outputfile.html"
 	mv $docxPath "$modeldir/$outputfile.docx"
 	mv $dotfilepath "$modeldir/$outputfile.$imgFormat"
 	echo "successfully wrote $modeldir/$outputfile.html + $modeldir/$outputfile.docx"
@@ -364,6 +363,7 @@ This script transforms a 'model description document' (conforming the schema $sc
 	* showCardinalities=true: show cardinalities for class properties (TODO relations)
 	* imgFormat=(png|svg): the format of any images in the documentation
 	* ranksep, nodesep: options to tweak dot graph output, cf. <https://graphviz.org/docs/attrs/ranksep/> and <https://graphviz.org/docs/attrs/nodesep/>
+	* useReferencedSchema=false(true|false): in case the model document contains a xml-model processing instruction, use the schema referenced there; otherwise use the default schema 
 "
 echo "$text"
 exit 1
@@ -402,6 +402,27 @@ if [ -z $(echo $parameters | grep -oP "(?<=imgFormat=)\w+") ];
 then imgFormat="svg"
 else imgFormat=$(echo $parameters | grep -oP "(?<=imgFormat=)\w+")
 fi
+
+useReferencedSchema=$(echo $parameters | grep -oP "(?<=useReferencedSchema=)\w+")
+
+if [[ $useReferencedSchema = "true" ]];
+then  
+	pathToSchema=$(xmlstarlet sel -t  -v '//processing-instruction("xml-model")' $inputfile | grep --only-matching -P '(?<=href=").+?(?=")')
+	if [ -z $pathToSchema ];
+	then
+		echo "no xml-model processing-instruction found in $inputfile"
+		pathToSchema=$(realpath "$scriptdir/$schemaFilename")
+		echo "defaulting to $pathToSchema"
+	else 
+		echo "found xml-model processing-instruction referencing $pathToSchema"
+	fi
+else
+	pathToSchema=$(realpath "$scriptdir/$schemaFilename")
+	echo "using default schema at $pathToSchema"
+fi
+
+export pathToSchema
+
 
 imgFilenamePattern="$listingHtmlFilenamePattern.$imgFormat"
 if [[ $verbose -eq 1 ]]; then
@@ -446,7 +467,7 @@ case $ACTION in
 			echo "missing -i option (input)"
 			exit 1
 		else 
-			validate $inputfile
+			validate $inputfile $pathToSchema
 			modeldir=$(dirname `realpath $inputfile`)
 			export workingdir="$modeldir/tmp"
 			if [ ! -e "$workingdir" ]
