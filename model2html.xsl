@@ -114,7 +114,7 @@
                         </figure>
                     </section>
                     <xsl:apply-templates/>
-                    <xsl:if test="not(relations)">
+                    <xsl:if test="not(exists(model/relations))">
                         <div class="content">
                             <xsl:sequence select="_:head(2, 'Relations')"/>
                             <xsl:apply-templates select="//relation" mode="mkPar"/>
@@ -168,6 +168,7 @@
             <xsl:choose>
                 <xsl:when test="self::relations">
                     <xsl:apply-templates mode="mkPar"/>
+                    <xsl:apply-templates select="$doc//class//relation" mode="mkPar"/>
                 </xsl:when>
                 <xsl:otherwise>
                     <xsl:apply-templates/>
@@ -176,7 +177,10 @@
         </div>
     </xsl:template>
     
-    <xsl:template match="class/definition|class/examples|class/properties|class/relations|model/vocabularies|model/datatypes">
+    <xsl:template match="class/relations"/>
+        
+    
+    <xsl:template match="class/definition|class/examples|class/properties|model/vocabularies|model/datatypes">
         <xsl:variable name="head" select="concat(upper-case(substring(local-name(.),1,1)),substring(local-name(.),2))"/>
         <xsl:if test="node()">
             <div class="{if (parent::model) then 'section' else 'content'}">
