@@ -11,3 +11,4 @@ RUN chmod +x modeller/build.sh
 RUN tree .
 
 RUN modeller/build.sh -a setup
+LABEL org.opencontainers.image.source=https://github.com/dasch124/modeller
