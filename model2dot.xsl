@@ -179,7 +179,7 @@
     <xsl:template name="relations-showCardinalities"/>
     
     <xsl:template name="relations-hideCardinalities">
-        <xsl:variable name="allRelations" select="root()//relation" as="element(relation)+"/>
+        <xsl:variable name="allRelations" select="root()//relation" as="element(relation)*"/>
         <xsl:variable name="sourceClasses" select="distinct-values($allRelations/sourceClass/@target/tokenize(.,' '))" as="xs:string*"/>
         <xsl:variable name="targetClasses" select="distinct-values($allRelations/targetClass/@target/tokenize(.,' '))" as="xs:string*"/>
         <xsl:variable name="types" select="distinct-values($allRelations/@type)"/>
