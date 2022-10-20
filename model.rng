@@ -302,6 +302,9 @@
       </optional>
       <ref name="name"/>
       <optional>
+        <ref name="mapping"/>
+      </optional>
+      <optional>
         <ref name="note"/>
       </optional>
     </element>
