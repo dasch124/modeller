@@ -137,10 +137,10 @@
     
     
     <xsl:template match="relation[$showCardinalities = 'true' or $showProperties = 'true']">
-        <xsl:variable name="sourceClassDef" select="root()//class[@ID = current()/sourceClass/@target]" as="element(class)"/>
+        <xsl:variable name="sourceClassDef" select="for $sourceID in tokenize(current()/sourceClass/@target,'\s+') return root()//class[@ID = $sourceID]" as="element(class)+"/>
         <xsl:variable name="sourceClassID" select="if ($showAbstractSuperclasses = 'false' and $sourceClassDef/@type = 'abstract') then root(.)//class[@parent = $sourceClassDef/@ID]/@ID else $sourceClassDef/@ID" as="attribute(ID)+"/>
         
-        <xsl:variable name="targetClassDef" select="root()//*[@ID = current()/targetClass/@target]" as="element(class)"/>
+        <xsl:variable name="targetClassDef" select="for $targetID in tokenize(current()/targetClass/@target,'\s+') return root()//class[@ID = $targetID]" as="element(class)+"/>
         <xsl:variable name="targetClassID" select="if ($showAbstractSuperclasses = 'false' and $targetClassDef/@type = 'abstract') then root(.)//class[@parent = $targetClassDef/@ID]/@ID else $targetClassDef/@ID" as="attribute(ID)+"/>
         
         <xsl:variable name="label" select="name"/>
@@ -160,7 +160,14 @@
             </xsl:if>
             ]
         </xsl:variable>
-        <xsl:value-of select="$sourceClassDef/@ID"/> -> <xsl:value-of select="$targetClassDef/@ID"/> <xsl:value-of select="$attributes"/>
+        <xsl:for-each select="$sourceClassDef/@ID">
+            <xsl:variable name="scID" select="."/>
+            <xsl:for-each select="$targetClassDef/@ID">
+                <xsl:variable name="tcID" select="."/>
+                <xsl:value-of select="$scID"/> -> <xsl:value-of select="$tcID"/> <xsl:value-of select="$attributes"/>
+            </xsl:for-each>
+        </xsl:for-each>
+<!--        <xsl:value-of select="$sourceClassDef/@ID"/> -> <xsl:value-of select="$targetClassDef/@ID"/> <xsl:value-of select="$attributes"/>-->
 
     <!-- CHECKME This clutters the graph, so commenting out for the moment -->
         <!--<xsl:if test="$sourceClassDef/@ID != $sourceClassID or $targetClassDef/@ID != $targetClassID">
@@ -189,7 +196,7 @@
                 <xsl:variable name="targetClass" select="."/>
                 <xsl:for-each select="($types,'')">
                     <xsl:variable name="type" select="."/>
-                    <xsl:variable name="relations" select="$allRelations[sourceClass/@target = $sourceClass][targetClass/@target = $targetClass][if ($type!='') then @type = $type else true()]" as="element(relation)*"/>
+                    <xsl:variable name="relations" select="$allRelations[tokenize(sourceClass/@target, '\s+') = $sourceClass][tokenize(targetClass/@target, '\s+') = $targetClass][if ($type!='') then @type = $type else true()]" as="element(relation)*"/>
                     <xsl:if test="exists($relations)">
                         <xsl:variable name="sourceClassDef" select="$doc//class[@ID = $sourceClass]" as="element(class)"/>
                         <xsl:variable name="sourceClassID" select="if ($showAbstractSuperclasses = 'false' and $sourceClassDef/@type = 'abstract') then $doc//class[@parent = $sourceClassDef/@ID]/@ID else $sourceClassDef/@ID" as="attribute(ID)+"/>
