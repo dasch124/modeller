@@ -352,7 +352,9 @@
   </define>
   <define name="name">
     <element name="name">
-      <text/>
+      <data type="string">
+        <param name="pattern">.+</param>
+      </data>
     </element>
   </define>
   <define name="ref">
