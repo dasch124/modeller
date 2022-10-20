@@ -244,6 +244,10 @@
         </p>
         <p class="block"><xsl:apply-templates select="node()"/></p>
     </xsl:template>
+    <xsl:template match="mapping" mode="inCell">
+        <p><xsl:text>Mapping to </xsl:text><a href="#{@targetLanguage}"><xsl:value-of select="$doc//reference[@ID = current()/@targetLanguage]//name"/></a>:</p>
+        <p><xsl:apply-templates select="@* except @targetLanguage|node()"/></p>
+    </xsl:template>
     <xsl:template match="mapping/@targetLanguage"/>
         
     <xsl:template match="mapping/@level">
@@ -786,7 +790,7 @@
                 </xsl:for-each>
             </td>
             <td>
-                <xsl:apply-templates select="note" mode="inCell"/>
+                <xsl:apply-templates select="note|mapping" mode="inCell"/>
             </td>
         </tr>
     </xsl:template>
