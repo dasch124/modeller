@@ -372,7 +372,7 @@
             </xsl:if>
         </xsl:variable>
         <xsl:variable name="relations" as="element(relation)*">
-            <xsl:for-each select="(root()//relation[if ($direction = 'incoming') then targetClass/@target = $classID else sourceClass/@target = $classID],$inheritedRelations)">
+            <xsl:for-each select="(root()//relation[if ($direction = 'incoming') then targetClass/tokenize(@target,' ') = $classID else sourceClass/tokenize(@target,' ') = $classID],$inheritedRelations)">
                 <xsl:sort select="name"/>
                 <xsl:sequence select="."/>
             </xsl:for-each>
