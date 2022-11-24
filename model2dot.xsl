@@ -196,7 +196,7 @@
                 <xsl:variable name="targetClass" select="."/>
                 <xsl:for-each select="($types,'')">
                     <xsl:variable name="type" select="."/>
-                    <xsl:variable name="relations" select="$allRelations[tokenize(sourceClass/@target, '\s+') = $sourceClass][tokenize(targetClass/@target, '\s+') = $targetClass][if ($type!='') then @type = $type else true()]" as="element(relation)*"/>
+                    <xsl:variable name="relations" select="$allRelations[tokenize(sourceClass/@target, '\s+') = $sourceClass][tokenize(targetClass/@target, '\s+') = $targetClass][if ($type = '') then not(@type) else @type = $type]" as="element(relation)*"/>
                     <xsl:if test="exists($relations)">
                         <xsl:variable name="sourceClassDef" select="$doc//class[@ID = $sourceClass]" as="element(class)"/>
                         <xsl:variable name="sourceClassID" select="if ($showAbstractSuperclasses = 'false' and $sourceClassDef/@type = 'abstract') then $doc//class[@parent = $sourceClassDef/@ID]/@ID else $sourceClassDef/@ID" as="attribute(ID)+"/>
