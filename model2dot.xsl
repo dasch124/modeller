@@ -183,7 +183,40 @@
     </xsl:template>
     
     
-    <xsl:template name="relations-showCardinalities"/>
+    <xsl:template name="relations-showCardinalities">
+        <xsl:variable name="allRelations" select="root()//relation" as="element(relation)*"/>
+        <xsl:for-each select="$allRelations">
+            <xsl:apply-templates select="."/>
+      <!--      <xsl:variable name="sourceClass" select="tokenize(sourceClass/@target,' ')"/>
+            <xsl:variable name="targetClass" select="tokenize(targetClass/@target,' ')"/>
+            
+            <xsl:variable name="relationName" select="name"/>
+            <xsl:variable name="type" select="@type"/>
+            <xsl:variable name="sourceClassDef" select="$doc//class[@ID = $sourceClass]" as="element(class)"/>
+            <xsl:variable name="sourceClassID" select="if ($showAbstractSuperclasses = 'false' and $sourceClassDef/@type = 'abstract') then $doc//class[@parent = $sourceClassDef/@ID]/@ID else $sourceClassDef/@ID" as="attribute(ID)+"/>
+            <xsl:variable name="targetClassDef" select="$doc//*[@ID = $targetClass]" as="element(class)"/>
+            <xsl:variable name="targetClassID" select="if ($showAbstractSuperclasses = 'false' and $targetClassDef/@type = 'abstract') then $doc//class[@parent = $targetClassDef/@ID]/@ID else $targetClassDef/@ID" as="attribute(ID)+"/>
+            
+            <xsl:variable name="s" select="$sourceClassID"/>
+            <xsl:variable name="t" select="$targetClassID"/>
+            
+            
+            <xsl:value-of select="$s"/> -> <xsl:value-of select="$t"/> [
+            
+            <xsl:text>label = "</xsl:text><xsl:value-of select="string-join($relationName,'&#10;')"/><xsl:text>"</xsl:text><!-\-<xsl:for-each select="$relations">
+<!-\\-                            <xsl:text disable-output-escaping="yes">&lt;a href="#</xsl:text><xsl:value-of select="@ID"/><xsl:text disable-output-escaping="yes">"&gt;</xsl:text><xsl:value-of select="name"/><xsl:text disable-output-escaping="yes">&lt;/a&gt;&lt;br/&gt;</xsl:text>-\\->
+                            <xsl:value-of select="name"/><xsl:text>&lt;BR/&gt;</xsl:text>
+                        </xsl:for-each>-\->
+            labelfloat = <xsl:value-of select="$labelfloat"/>
+            URL = "<xsl:value-of select="concat('#',$relations[1]/@ID)"/>"
+            <xsl:if test="$type = 'implicit'">
+                style=dashed
+                color = gray
+                fontcolor = gray
+            </xsl:if>
+            ]-->
+        </xsl:for-each>
+    </xsl:template>
     
     <xsl:template name="relations-hideCardinalities">
         <xsl:variable name="allRelations" select="root()//relation" as="element(relation)*"/>
