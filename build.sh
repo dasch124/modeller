@@ -318,10 +318,10 @@ generateDocs() {
 	fi
 
 	# clean up working directory
-	mv $html "$modeldir/$outputfile.html"
-	mv $docxPath "$modeldir/$outputfile.docx"
-	mv $dotfilepath "$modeldir/$outputfile.$imgFormat"
-	echo "successfully wrote $modeldir/$outputfile.html + $modeldir/$outputfile.docx"
+	mv $html "$outputdir/$outputfile.html"
+	mv $docxPath "$outputdir/$outputfile.docx"
+	mv $dotfilepath "$outputdir/$outputfile.$imgFormat"
+	echo "successfully wrote $outputdir/$outputfile.html + $outputdir/$outputfile.docx"
 	if [[ $keeptmpfiles -ne 1 ]]; then rm -rf "$workingdir"; fi
 	exit 0
 }
@@ -354,6 +354,7 @@ This script transforms a 'model description document' (conforming the schema $sc
 	* setup: initial setup of folder structure and dependencies for processing
 -i: input (XMl-enoded model) - obligatory for all actions except generateTemplates or setup
 -o: ouptput filename (optional)
+-O: output path (optional, defaulfts to directory of input model)
 -v: verbose – write additional output (to a logfile and to stdout)
 -l: name of the log file (implies -v)
 -k: keep temporary files for debugging purposes
@@ -370,13 +371,14 @@ exit 1
 }
 
 echo
-while getopts 'a:i:o:p:l:kv' OPTION
+while getopts 'a:i:o:O:p:l:kv' OPTION
 do
 case ${OPTION} in 
 	a) ACTION="$OPTARG" ;;
 	i) inputfile="$OPTARG" ;;
 	o) outputfile="$OPTARG" ;;
 	p) parameters="$OPTARG" ;;
+	O) outputdir="$OPTARG" ;;
 	k) export keeptmpfiles=1 ;;
 	v) export verbose=1 ;;
 	l) logfile="$OPTARG" ;;
@@ -449,6 +451,10 @@ case $ACTION in
 			then  outputfile="$(basename $inputfile .xml)"
 			fi
 			export modeldir=$(dirname `realpath $inputfile`)
+			if [[ -z $outputdir ]]
+			then outputdir="$modeldir"
+			fi
+			mkdir -p $outputdir
 			export workingdir="$modeldir/tmp"
 			mkdir -p $workingdir
 			generateDocs $inputfile $outputfile
