@@ -197,7 +197,9 @@
             </sch:rule>
           </data>
         </attribute>
+          <optional>
         <ref name="arity"/>
+          </optional>
       </element>
       <element name="targetClass">
         <attribute name="target">
