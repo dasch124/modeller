@@ -14,7 +14,8 @@
     <xsl:param name="ranksep">1</xsl:param>
     <xsl:param name="labeldistance">1.0</xsl:param>
     <xsl:param name="labelfloat">false</xsl:param>
-    <xsl:variable name="doc" select="root()" as="document-node()"/>
+    <xsl:key name="class-by-id" match="//class" use="@ID"/>
+    <xsl:key name="class-by-parent" match="//class" use="@parent"/>
     <xsl:variable name="subclassStyle">
         <xsl:text>style = dotted&#10;color = gray&#10;fontcolor = gray</xsl:text>
     </xsl:variable>
@@ -231,10 +232,10 @@
                     <xsl:variable name="type" select="."/>
                     <xsl:variable name="relations" select="$allRelations[tokenize(sourceClass/@target, '\s+') = $sourceClass][tokenize(targetClass/@target, '\s+') = $targetClass][if ($type = '') then not(@type) else @type = $type]" as="element(relation)*"/>
                     <xsl:if test="exists($relations)">
-                        <xsl:variable name="sourceClassDef" select="$doc//class[@ID = $sourceClass]" as="element(class)"/>
-                        <xsl:variable name="sourceClassID" select="if ($showAbstractSuperclasses = 'false' and $sourceClassDef/@type = 'abstract') then $doc//class[@parent = $sourceClassDef/@ID]/@ID else $sourceClassDef/@ID" as="attribute(ID)+"/>
-                        <xsl:variable name="targetClassDef" select="$doc//*[@ID = $targetClass]" as="element(class)"/>
-                        <xsl:variable name="targetClassID" select="if ($showAbstractSuperclasses = 'false' and $targetClassDef/@type = 'abstract') then $doc//class[@parent = $targetClassDef/@ID]/@ID else $targetClassDef/@ID" as="attribute(ID)+"/>
+                        <xsl:variable name="sourceClassDef" select="key('class-by-id', $sourceClass, root($allRelations[1]))" as="element(class)"/>
+                        <xsl:variable name="sourceClassID" select="if ($showAbstractSuperclasses = 'false' and $sourceClassDef/@type = 'abstract') then key('class-by-parent', $sourceClassDef/@ID)/@ID else $sourceClassDef/@ID" as="attribute(ID)+"/>
+                        <xsl:variable name="targetClassDef" select="key('class-by-id', $targetClass, root($allRelations[1]))" as="element(class)"/>
+                        <xsl:variable name="targetClassID" select="if ($showAbstractSuperclasses = 'false' and $targetClassDef/@type = 'abstract') then key('class-by-parent',$targetClassDef/@ID)/@ID else $targetClassDef/@ID" as="attribute(ID)+"/>
                         
                         <xsl:variable name="s" select="$sourceClassID"/>
                         <xsl:variable name="t" select="$targetClassID"/>

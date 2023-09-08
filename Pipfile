@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+saxonche = "*"
+lxml = "*"
+graphviz = "*"
+pygments = "*"
+pandoc = "*"
+imgkit = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.10"

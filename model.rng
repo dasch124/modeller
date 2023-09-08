@@ -42,7 +42,10 @@
           <attribute name="role">
             <data type="NCName"/>
           </attribute>
-          <ref name="person"/>
+          <choice>
+            <ref name="person"/>
+            <ref name="ref"/>
+          </choice>
         </element>
       </oneOrMore>
       <element name="version">
@@ -162,6 +165,9 @@
   </define>
 
   <define name="relation">
+    <sch:rule context="relation[not(parent::class)]">
+      <sch:assert test="exists(sourceClass)">A relation element which is not a child of a class element must have a sourceClass element.</sch:assert>
+    </sch:rule>
     <element name="relation">
       <ref name="ID"/>
       <optional>
@@ -189,18 +195,20 @@
           </data>
         </attribute>
       </optional>
-      <element name="sourceClass">
-        <attribute name="target">
-          <data type="IDREFS">
-            <sch:rule context="sourceClass/@target">
-              <sch:assert test="for i in tokenize . return exists(root()//class[@ID = $i])">class with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
-            </sch:rule>
-          </data>
-        </attribute>
+      <optional>
+        <element name="sourceClass">
+          <attribute name="target">
+            <data type="IDREFS">
+              <sch:rule context="sourceClass/@target">
+                <sch:assert test="for i in tokenize . return exists(root()//class[@ID = $i])">class with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
+              </sch:rule>
+            </data>
+          </attribute>
           <optional>
-        <ref name="arity"/>
+            <ref name="arity"/>
           </optional>
-      </element>
+        </element>
+      </optional>
       <element name="targetClass">
         <attribute name="target">
           <data type="IDREFS">
@@ -215,6 +223,11 @@
       <element name="reverseName">
         <text/>
       </element>
+      <optional>
+        <element name="reificationName">
+          <text/>
+        </element>
+      </optional>
       <optional>
         <ref name="definition"/>
       </optional>
@@ -366,9 +379,7 @@
     <element name="ref">
       <choice>
         <attribute name="target">
-          <choice>
-            <data type="IDREF"/>
-          </choice>
+          <data type="IDREF"/>
         </attribute>
         <ref name="uriAtt"/>
       </choice>
@@ -683,9 +694,9 @@
           </data>
         </attribute>
       </optional>
-      <optional>
+      <!--<optional>
         <ref name="datatypeName"/>
-      </optional>
+      </optional>-->
       <empty/>
     </element>
   </define>
