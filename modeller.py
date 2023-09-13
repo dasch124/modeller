@@ -111,6 +111,17 @@ def expandModel(config):
 
 def toDocx(config):
     debug("toDocx")
+
+
+    # highlight code listings in html code
+    pathToHTMLFormatted=formatListings(config)
+    config["pathToHTMLFormatted"]=pathToHTMLFormatted
+    config["artifactsTmpPaths"].append(pathToHTMLFormatted)
+    
+    # replace html listings with images
+    pathToHTMLFormattedWithImages=embedImages(config)
+    config["pathToHTMLFormattedWithImages"]=pathToHTMLFormattedWithImages
+
     h=config["pathToHTMLFormattedWithImages"]
     debug("h="+h)
     pathToHTMLWithEmbeddedImages=embedImages(config)
@@ -119,6 +130,7 @@ def toDocx(config):
     doc = pandoc.read(file=h, format="html")
     pandoc.write(doc, format="docx", file=pathToDocx)
     debug("pathToDocx="+pathToDocx)
+    
     return pathToDocx
 
 def formatListings(config):
@@ -312,18 +324,11 @@ def generateDocs(config):
     pathToHTML=model2html(config)
     config["pathToHTML"]=pathToHTML
     
-    # highlight code listings in html code
-    pathToHTMLFormatted=formatListings(config)
-    config["pathToHTMLFormatted"]=pathToHTMLFormatted
-    config["artifactsTmpPaths"].append(pathToHTMLFormatted)
-    
-    # replace html listings with images
-    pathToHTMLFormattedWithImages=embedImages(config)
-    config["pathToHTMLFormattedWithImages"]=pathToHTMLFormattedWithImages
     tmpPathToDocx=toDocx(config)
-    
-    config["artifactsTmpPaths"].append(tmpPathToDocx)
-
+    if not os.path.exists(tmpPathToDocx):
+        print("generating docx from HTML was not successful")
+    else:
+        config["artifactsTmpPaths"].append(tmpPathToDocx)
 
     moveArtifactsToFinalLocations(config)
     print("generated docs:")
