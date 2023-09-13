@@ -336,6 +336,7 @@ def moveArtifactsToFinalLocations(config):
         ext=os.path.splitext(a)[1]
         finalPath=config["output"]+ext
         os.rename(a, finalPath)
+        debug("moving "+a+" --> "+finalPath)
         config["artifacts"].append(finalPath)
 
 def model2html(config):
