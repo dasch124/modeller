@@ -22,14 +22,25 @@
 
   <define name="person">
     <element name="person">
-      <ref name="ID"/>
-      <ref name="name"/>
-      <optional>
-        <element name="contact">
-          <text/>
-        </element>
-      </optional>
+      <choice>
+        <ref name="namedEntityReference"/>
+        <ref name="namedEntityFull"/>
+      </choice>
     </element>
+  </define>
+  
+  <define name="namedEntityFull">
+    <ref name="ID"/>
+    <ref name="name"/>
+    <optional>
+      <element name="contact">
+        <text/>
+      </element>
+    </optional>
+  </define>
+  
+  <define name="namedEntityReference">
+    <ref name="ref"/>
   </define>
 
   <define name="meta">
