@@ -44,7 +44,7 @@ def init(args):
     outputDir=args.outputDir if args.outputDir is not None else modelDir
     config["outputDir"]=outputDir
     
-    output=args.output if args.output != None else args.input
+    output=args.output if args.output != None else outputDir+"/"+config["inputFnNoExt"]
     config["output"]=output
 
     # parse model and extract metadata
@@ -59,6 +59,11 @@ def init(args):
         if not os.path.exists(i):
             os.mkdir(i)
     
+    # the temp paths of the build artifacts in the working directory
+    config["artifactsTmpPaths"]=[]
+
+    # the paths to the final artifacts 
+    config["artifacts"]=[]
     debug("init()")
     for key, value in config.items():
         debug(key+"="+str(value))
@@ -105,11 +110,15 @@ def expandModel(config):
 
 
 def toDocx(config):
+    debug("toDocx")
     h=config["pathToHTMLFormattedWithImages"]
-    pathToHTMLWithEmbeddedImages=embedImages
+    debug("h="+h)
+    pathToHTMLWithEmbeddedImages=embedImages(config)
+    debug("pathToHTMLWithEmbeddedImages="+pathToHTMLWithEmbeddedImages)
     pathToDocx=os.path.splitext(h)[0]+".docx"
     doc = pandoc.read(file=h, format="html")
-    output = pandoc.write(doc, format="docx", file=pathToDocx)
+    pandoc.write(doc, format="docx", file=pathToDocx)
+    debug("pathToDocx="+pathToDocx)
     return pathToDocx
 
 def formatListings(config):
@@ -306,12 +315,28 @@ def generateDocs(config):
     # highlight code listings in html code
     pathToHTMLFormatted=formatListings(config)
     config["pathToHTMLFormatted"]=pathToHTMLFormatted
+    config["artifactsTmpPaths"].append(pathToHTMLFormatted)
     
     # replace html listings with images
     pathToHTMLFormattedWithImages=embedImages(config)
     config["pathToHTMLFormattedWithImages"]=pathToHTMLFormattedWithImages
-    pathToDocx=toDocx(config)
+    tmpPathToDocx=toDocx(config)
+    
+    config["artifactsTmpPaths"].append(tmpPathToDocx)
 
+
+    moveArtifactsToFinalLocations(config)
+    print("generated docs:")
+    for p in config["artifacts"]:
+        print(p)
+    
+
+def moveArtifactsToFinalLocations(config):
+    for a in config["artifactsTmpPaths"]:
+        ext=os.path.splitext(a)[1]
+        finalPath=config["output"]+ext
+        os.rename(a, finalPath)
+        config["artifacts"].append(finalPath)
 
 def model2html(config):
     """transform the model document to a html file, including listings as html and references the graph image"""
