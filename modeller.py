@@ -408,7 +408,7 @@ def main(args):
     
     elif args.action == "setup":
         return
-        
+         
     elif args.action == "generateDocs":
         if args.input is None:
             print("missing argument -i / --input")
@@ -436,6 +436,7 @@ parser = argparse.ArgumentParser(
       formatter_class=argparse.RawDescriptionHelpFormatter)
 parser.add_argument('-a','--action', nargs='?', default="help", help='the action to run', choices=["setup", "generateGraph", "generateDocs", "generateTemplates"])
 parser.add_argument('-i','--input', type=expandPath,help='the path to the model document (obligatory for all actions except generateTemplates or setup)')
+parser.add_argument('-f', '--formats', choices=["html", "docx"], help='the output formats to be generated', action='append', default=["html"])
 parser.add_argument('-d', '--debug', help='switch on debuggin mode (storing intermediate files, verbose output)', action='store_true')
 parser.add_argument('-o', '--output', help='output filename')
 parser.add_argument('-O', '--outputDir', help='output directory (defaults to the directory of the input file)')
@@ -443,7 +444,6 @@ parser.add_argument('--showAbstractSuperclasses', default=False, help='include a
 parser.add_argument('--showProperties', default=True, help='show properties for classes')
 parser.add_argument('--showCardinalities', default=False, help='show cardinalities for class properties (TODO relations)')
 parser.add_argument('--imgFormat', default='svg', choices=['svg', 'png'], help='the format of any images in the documentation')
-parser.add_argument('-f', '--formats', nargs='+', help='the format of any images in the documentation', default="html")
 parser.add_argument('--ranksep', default=0, help='ranksep parameter of dot (cf. <https://graphviz.org/docs/attrs/ranksep/>)')
 parser.add_argument('--nodesep', default=0, help='nodesep parameter of dot (cf. <https://graphviz.org/docs/attrs/nodesep/>)')
 parser.add_argument('--modelSchema', default="model.rng", help='name of the schema to be used (defaults to model.rng next to this python script)')
