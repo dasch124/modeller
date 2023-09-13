@@ -41,11 +41,11 @@ def init(args):
     config["libDir"]=libDir
     
     # the directory where final output files should be written to
-    outputDir=args.outputDir if args.outputDir is not None else modelDir
+    outputDir=expandPath(args.outputDir) if args.outputDir is not None else expandPath(modelDir)
     config["outputDir"]=outputDir
     
-    output=args.output if args.output != None else outputDir+"/"+config["inputFnNoExt"]
-    config["output"]=output
+    outputFnNoExt=args.outputFilename if args.outputFilename != None else config["inputFnNoExt"]
+    config["outputFnNoExt"]=outputFnNoExt
 
     # parse model and extract metadata
     if config["input"] is not None:
@@ -344,7 +344,7 @@ def generateDocs(config):
 def moveArtifactsToFinalLocations(config):
     for a in config["artifactsTmpPaths"]:
         ext=os.path.splitext(a)[1]
-        finalPath=config["output"]+ext
+        finalPath=config["outputDir"]+"/"+config["outputFnNoExt"]+ext
         os.rename(a, finalPath)
         debug("moving "+a+" --> "+finalPath)
         if os.path.exists(finalPath):
@@ -396,9 +396,8 @@ def debug(msg):
 
 def main(args):
     global DEBUG
-    DEBUG=args.debug
-    config=init(args)
-    
+    DEBUG=args.debug 
+
     if args.action is None:
         parser.print_help()
         debug("Passed arguments:")
@@ -406,20 +405,21 @@ def main(args):
             debug(f'{k} = {v}')
         return
     
-    elif args.action == "setup":
-        return
-         
+    elif args.action == "generateTemplates":
+        generateTemplates(config)
+    
+    
     elif args.action == "generateDocs":
+        config=init(args)
+
         if args.input is None:
             print("missing argument -i / --input")
             parser.print_help()
         generateDocs(config)
     
     elif args.action == "generateGraph":
+        config=init(args)
         generateGraph(config)
-    
-    elif args.action == "generateTemplates":
-        generateTemplates(config)
     
     else: 
         parser.print_help()
@@ -438,7 +438,7 @@ parser.add_argument('-a','--action', nargs='?', default="help", help='the action
 parser.add_argument('-i','--input', type=expandPath,help='the path to the model document (obligatory for all actions except generateTemplates or setup)')
 parser.add_argument('-f', '--formats', choices=["html", "docx"], help='the output formats to be generated', action='append', default=["html"])
 parser.add_argument('-d', '--debug', help='switch on debuggin mode (storing intermediate files, verbose output)', action='store_true')
-parser.add_argument('-o', '--output', help='output filename')
+parser.add_argument('-o', '--outputFilename', help='output filename')
 parser.add_argument('-O', '--outputDir', help='output directory (defaults to the directory of the input file)')
 parser.add_argument('--showAbstractSuperclasses', default=False, help='include abstract superclasses in the graph rendering')
 parser.add_argument('--showProperties', default=True, help='show properties for classes')
