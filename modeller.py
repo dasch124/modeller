@@ -327,6 +327,7 @@ def generateDocs(config):
     tmpPathToDocx=toDocx(config)
     if not os.path.exists(tmpPathToDocx):
         print("generating docx from HTML was not successful")
+        return
     else:
         config["artifactsTmpPaths"].append(tmpPathToDocx)
 
@@ -334,7 +335,7 @@ def generateDocs(config):
     print("generated docs:")
     for p in config["artifacts"]:
         print(p)
-    
+    return
 
 def moveArtifactsToFinalLocations(config):
     for a in config["artifactsTmpPaths"]:
