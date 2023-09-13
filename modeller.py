@@ -337,7 +337,10 @@ def moveArtifactsToFinalLocations(config):
         finalPath=config["output"]+ext
         os.rename(a, finalPath)
         debug("moving "+a+" --> "+finalPath)
-        config["artifacts"].append(finalPath)
+        if os.path.exists(finalPath):
+            config["artifacts"].append(finalPath)
+        else: 
+            print("error copying "+a+" to "+finalPath)
 
 def model2html(config):
     """transform the model document to a html file, including listings as html and references the graph image"""
