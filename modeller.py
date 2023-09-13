@@ -116,7 +116,6 @@ def toDocx(config):
     # highlight code listings in html code
     pathToHTMLFormatted=formatListings(config)
     config["pathToHTMLFormatted"]=pathToHTMLFormatted
-    config["artifactsTmpPaths"].append(pathToHTMLFormatted)
     
     # replace html listings with images
     pathToHTMLFormattedWithImages=embedImages(config)
@@ -320,16 +319,21 @@ def generateDocs(config):
     # expand x-includles
     pathToExpandedModel=expandModel(config)
     config["pathToExpandedModel"]=pathToExpandedModel
-	# transform to html
+	
+    # Currently we always need to transform to html
     pathToHTML=model2html(config)
     config["pathToHTML"]=pathToHTML
+
+    if "html" in config["formats"]:
+        config["artifactsTmpPaths"].append(pathToHTML)
     
-    tmpPathToDocx=toDocx(config)
-    if not os.path.exists(tmpPathToDocx):
-        print("generating docx from HTML was not successful")
-        return
-    else:
-        config["artifactsTmpPaths"].append(tmpPathToDocx)
+    if "docx" in config["formats"]:
+        tmpPathToDocx=toDocx(config)
+        if not os.path.exists(tmpPathToDocx):
+            print("generating docx from HTML was not successful")
+            return
+        else:
+            config["artifactsTmpPaths"].append(tmpPathToDocx)
 
     moveArtifactsToFinalLocations(config)
     print("generated docs:")
@@ -424,6 +428,9 @@ def main(args):
 def expandPath(path):
     return os.path.abspath(os.path.expanduser(path))
 
+
+
+
 parser = argparse.ArgumentParser(
       prog='Modeller',
       formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -436,6 +443,7 @@ parser.add_argument('--showAbstractSuperclasses', default=False, help='include a
 parser.add_argument('--showProperties', default=True, help='show properties for classes')
 parser.add_argument('--showCardinalities', default=False, help='show cardinalities for class properties (TODO relations)')
 parser.add_argument('--imgFormat', default='svg', choices=['svg', 'png'], help='the format of any images in the documentation')
+parser.add_argument('-f', '--formats', nargs='+', help='the format of any images in the documentation', default="html")
 parser.add_argument('--ranksep', default=0, help='ranksep parameter of dot (cf. <https://graphviz.org/docs/attrs/ranksep/>)')
 parser.add_argument('--nodesep', default=0, help='nodesep parameter of dot (cf. <https://graphviz.org/docs/attrs/nodesep/>)')
 parser.add_argument('--modelSchema', default="model.rng", help='name of the schema to be used (defaults to model.rng next to this python script)')
