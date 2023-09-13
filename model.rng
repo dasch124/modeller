@@ -22,14 +22,33 @@
 
   <define name="person">
     <element name="person">
-      <ref name="ID"/>
-      <ref name="name"/>
-      <optional>
-        <element name="contact">
-          <text/>
-        </element>
-      </optional>
+      <choice>
+        <ref name="namedEntityFull"/>
+        <attribute name="IDREF">
+          <ref name="personIDRef"/>
+        </attribute>
+      </choice>
     </element>
+  </define>
+  
+  <define name="namedEntityFull">
+    <ref name="ID"/>
+    <ref name="name"/>
+    <optional>
+      <element name="contact">
+        <text/>
+      </element>
+    </optional>
+  </define>
+  
+  <define name="personIDRef">
+    <data type="IDREF">
+      <sch:pattern>
+        <sch:rule context="@who|@IDREF">
+          <sch:assert test="exists(root()//person[@ID = current()])">reference element with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
+        </sch:rule>
+      </sch:pattern>
+    </data>
   </define>
 
   <define name="meta">
@@ -70,13 +89,7 @@
               </sch:rule>
             </sch:pattern>
             <attribute name="who">
-              <data type="IDREF">
-                <sch:pattern>
-                  <sch:rule context="@who">
-                    <sch:assert test="exists(root()//person[@ID = current()])">reference element with ID "<sch:value-of select="current()"/>" not found.</sch:assert>
-                  </sch:rule>
-                </sch:pattern>
-              </data>
+              <ref name="personIDRef"/>
             </attribute>
             <oneOrMore>
               <choice>
@@ -781,6 +794,7 @@
               <name>targetLanguage</name>
               <name>classRef</name>
               <name>ID</name>
+              <name>IDREF</name>
               <name>vocabRef</name>
               <name>parent</name>
               <name>who</name>
